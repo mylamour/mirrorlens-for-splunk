@@ -1,0 +1,12 @@
+services:
+  mirrorlens:
+    build: .
+    ports:
+      - "8091:8091"
+    env_file:
+      - .env
+    environment:
+      # Override Claude model (default: claude-sonnet-4-20250514)
+      # For Opus: claude-opus-4-20250514
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}
+    restart: unless-stopped

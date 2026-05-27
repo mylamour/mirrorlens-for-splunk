@@ -2,3 +2,29 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
+.env
+.env.local
+*.pem
+*.key
+*.egg-info/
+dist/
+build/
+
+# Node / frontend
+node_modules/
+dashboard/frontend/node_modules/
+dashboard/frontend/dist/
+
+# AI agent session data
+.claude/
+.cursor/
+.worktrees/
+
+# Internal planning docs (not for public repo)
+docs/superpowers/
+docs/division-of-work.md
+
+# OS / editor
+.DS_Store
+*.swp
+*.swo

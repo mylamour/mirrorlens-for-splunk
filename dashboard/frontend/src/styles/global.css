@@ -1,0 +1,66 @@
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+:root {
+  --bg: #070B16;
+  --cyan: #00E5FF;
+  --green: #00FF94;
+  --red: #FF3B5C;
+  --amber: #FFB020;
+  --purple: #B388FF;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(0,229,255,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(0,255,148,0.03) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,229,255,0.3); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,229,255,0.6); }
+
+.mono { font-family: "JetBrains Mono", monospace; }
+.brand-font { font-family: "Orbitron", sans-serif; }
+
+.neon-cyan { color: var(--cyan); text-shadow: 0 0 6px rgba(0,229,255,0.55); }
+.neon-green { color: var(--green); text-shadow: 0 0 6px rgba(0,255,148,0.55); }
+.neon-red { color: var(--red); text-shadow: 0 0 6px rgba(255,59,92,0.55); }
+.neon-amber { color: var(--amber); text-shadow: 0 0 6px rgba(255,176,32,0.55); }
+.neon-purple { color: var(--purple); text-shadow: 0 0 6px rgba(179,136,255,0.55); }
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}

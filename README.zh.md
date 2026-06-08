@@ -167,8 +167,8 @@ pnpm dev
 | **Attack Timeline** | MITRE ATT&CK 技术时间线与战术映射 |
 | **Detection Rules** | AI 生成的 SPL 检测规则与实时验证状态、匹配数合并展示 |
 | **Response Playbook** | 执行摘要 + 编号的修复操作及风险等级 |
-| **Discovery & Evidence** | 辅助上下文：Splunk 服务器信息、索引、字段、主机、源类型、证据查询 |
-| **Detection Gaps** | 辅助上下文：攻击步骤缺乏检测覆盖的位置 |
+| **Discovery & Evidence** | 默认折叠的辅助上下文：Splunk 服务器信息、索引、字段、主机、源类型、证据查询 |
+| **Detection Gaps** | 默认折叠的辅助上下文：攻击步骤缺乏检测覆盖的位置 |
 | **Agent Trace / MCP Proof** | 抽屉视图：实时 ReAct 推理阶段、Splunk MCP 工具调用、SPL、状态、行数 |
 
 ### 规则匹配警报

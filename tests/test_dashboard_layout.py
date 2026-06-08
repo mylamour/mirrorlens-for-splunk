@@ -41,3 +41,13 @@ def test_dashboard_result_panels_stay_summary_first():
     assert "sortDetectionRuleRows(rows)" in center
     assert "visibleRecommendations = recs.slice(0, 3)" in center
     assert "generated?.alert_condition" not in center
+
+
+def test_supporting_context_is_collapsed_by_default():
+    root = Path(__file__).resolve().parents[1]
+    center = (root / "dashboard/frontend/src/components/CenterPanel.tsx").read_text()
+
+    assert "showSupportingContext" in center
+    assert "SHOW EVIDENCE & GAPS" in center
+    assert "HIDE EVIDENCE & GAPS" in center
+    assert "primaryPanels.length > 0 && secondaryPanels.length > 0 && showSupportingContext" in center

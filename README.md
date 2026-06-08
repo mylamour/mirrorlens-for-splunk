@@ -187,8 +187,8 @@ click "Connect & Investigate".
 | **Attack Timeline** | MITRE ATT&CK technique timeline with tactic mapping |
 | **Detection Rules** | AI-generated SPL rules merged with live validation status and match count |
 | **Response Playbook** | Executive summary + numbered remediation actions with risk levels |
-| **Discovery & Evidence** | Secondary context with Splunk server info, indexes, fields, hosts, sourcetypes, and evidence queries |
-| **Detection Gaps** | Secondary context for attack steps that lack detection coverage |
+| **Discovery & Evidence** | Collapsed supporting context with Splunk server info, indexes, fields, hosts, sourcetypes, and evidence queries |
+| **Detection Gaps** | Collapsed supporting context for attack steps that lack detection coverage |
 | **Agent Trace / MCP Proof** | Drawer with real-time ReAct reasoning stages and Splunk MCP tool calls, SPL, status, and row counts |
 
 ### Rule Match Alert

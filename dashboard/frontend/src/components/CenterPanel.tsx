@@ -22,6 +22,7 @@ type DetailItem = {
 export default function CenterPanel() {
   const { phases, discovery, evidence, analysis, recommendations, investigationRunning, statusEvents } = useData();
   const [detail, setDetail] = useState<DetailItem | null>(null);
+  const [showSupportingContext, setShowSupportingContext] = useState(false);
 
   const latestPhase = new Map<string, string>();
   for (const p of phases) latestPhase.set(p.name, p.status);
@@ -113,6 +114,8 @@ export default function CenterPanel() {
   const resultPanels = primaryPanels.length > 0 ? primaryPanels : secondaryPanels;
   const resultCols = resultPanels.length <= 1 ? 1 : Math.min(3, resultPanels.length);
   const secondaryCols = Math.min(2, secondaryPanels.length);
+  const gapCount = (gapData?.data?.length ?? 0);
+  const supportingSummary = `${discovery.length} discovery · ${evidence.length} evidence${gapCount > 0 ? ` · ${gapCount} gaps` : ""}`;
 
   return (
     <>
@@ -152,6 +155,43 @@ export default function CenterPanel() {
         </Box>
 
         {primaryPanels.length > 0 && secondaryPanels.length > 0 && (
+          <Box
+            sx={{
+              flexShrink: 0,
+              minHeight: 34,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 1.25,
+              borderTop: "1px solid rgba(255,255,255,0.06)",
+              pt: 0.25,
+            }}
+          >
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setShowSupportingContext((value) => !value)}
+              sx={{
+                borderColor: `${COLORS.cyan}55`,
+                color: COLORS.cyan,
+                fontFamily: "'Orbitron'",
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: 1,
+                minWidth: 180,
+                py: 0.25,
+                "&:hover": { background: `${COLORS.cyan}12`, borderColor: COLORS.cyan },
+              }}
+            >
+              {showSupportingContext ? "HIDE EVIDENCE & GAPS" : "SHOW EVIDENCE & GAPS"}
+            </Button>
+            <Typography variant="caption" sx={{ color: "grey.600", fontSize: 11, fontFamily: "'JetBrains Mono'" }}>
+              {supportingSummary}
+            </Typography>
+          </Box>
+        )}
+
+        {primaryPanels.length > 0 && secondaryPanels.length > 0 && showSupportingContext && (
           <Box
             sx={{
               height: { xs: "auto", md: 150 },

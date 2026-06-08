@@ -217,6 +217,7 @@ After the ReAct investigation completes:
 | `GET` | `/api/status` | Returns `running`, `phase`, `elapsed_seconds`, `watch_running` |
 | `POST` | `/api/watch/stop` | Stop continuous watch mode |
 | `GET` | `/api/snapshot` | Full replay state for all 9 EventBus channels |
+| `POST` | `/api/demo/reset` | Clear sample replay/dashboard state |
 | `WS` | `/api/stream` | Real-time WebSocket event stream |
 
 ---

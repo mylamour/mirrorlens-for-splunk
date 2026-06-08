@@ -84,10 +84,12 @@ The dashboard ships with a real desensitized investigation result. To view it wi
 1. Start the dashboard (Docker or dev mode — see above)
 2. On the connection screen, click **⚡ Load Sample Investigation**
 3. The full investigation result loads instantly — 12-step MITRE ATT&CK timeline, 8 detection gaps, 5 validated rules all with live matches
+4. Click **RESET VIEW** in the header to clear the sample and return to the connection screen.
 
 Or via API directly:
 ```bash
 curl -X POST http://localhost:8091/api/demo/load
+curl -X POST http://localhost:8091/api/demo/reset
 ```
 
 ---

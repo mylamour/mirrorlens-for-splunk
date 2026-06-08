@@ -320,6 +320,7 @@ function ConnectionSetup() {
     if (!canSubmit) return;
     setConnecting(true);
     try {
+      window.localStorage.removeItem("mirrorlens_sample_replay");
       if (showManualFields) {
         await triggerInvestigation({ splunk_url: url.trim(), splunk_token: token.trim() });
       } else {
@@ -334,8 +335,10 @@ function ConnectionSetup() {
     if (loadingDemo || connecting) return;
     setLoadingDemo(true);
     try {
+      window.localStorage.setItem("mirrorlens_sample_replay", "1");
       await loadDemoData();
     } catch {
+      window.localStorage.removeItem("mirrorlens_sample_replay");
       setLoadingDemo(false);
     }
   };

@@ -1,17 +1,38 @@
-import { Box, Typography } from "@mui/material";
+import { useState } from "react";
+import { Box, Button, Typography } from "@mui/material";
 import { motion } from "framer-motion";
 import { useData } from "../data/context";
+import { resetDemoData } from "../data/api";
 import { COLORS } from "../theme";
 import MetricCard from "./shared/MetricCard";
 import PhaseProgress from "./PhaseProgress";
 
 export default function Header() {
-  const { discovery, evidence, analysis, status, watchEvents } = useData();
+  const { discovery, evidence, analysis, status, statusEvents, watchEvents, investigationRunning } = useData();
+  const [resetting, setResetting] = useState(false);
 
   const indexCount = discovery.find((d) => d.type === "indexes")?.count ?? 0;
   const hostCount = discovery.find((d) => d.type === "hosts")?.count ?? 0;
   const evtCount = evidence.find((e) => e.type === "collection_complete")?.deduplicated ?? 0;
   const gapCount = analysis.find((a) => a.type === "gaps")?.data?.length ?? 0;
+  const hasDashboardState =
+    discovery.length > 0 ||
+    evidence.length > 0 ||
+    analysis.length > 0 ||
+    statusEvents.length > 0;
+  const sampleReplay = window.localStorage.getItem("mirrorlens_sample_replay") === "1";
+
+  const handleReset = async () => {
+    if (resetting || (investigationRunning && !sampleReplay)) return;
+    setResetting(true);
+    try {
+      await resetDemoData();
+      window.localStorage.removeItem("mirrorlens_sample_replay");
+      window.location.reload();
+    } catch {
+      setResetting(false);
+    }
+  };
 
   return (
     <Box
@@ -66,6 +87,29 @@ export default function Header() {
           </motion.div>
         ) : null;
       })()}
+
+      {hasDashboardState && (!investigationRunning || sampleReplay) && (
+        <Button
+          variant="outlined"
+          size="small"
+          disabled={resetting}
+          onClick={handleReset}
+          sx={{
+            borderColor: `${COLORS.cyan}55`,
+            color: COLORS.cyan,
+            fontFamily: "'Orbitron'",
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: 1,
+            minWidth: 96,
+            px: 1,
+            py: 0.25,
+            "&:hover": { background: `${COLORS.cyan}12`, borderColor: COLORS.cyan },
+          }}
+        >
+          {resetting ? "RESETTING" : "RESET VIEW"}
+        </Button>
+      )}
 
       <Box
         sx={{

@@ -132,6 +132,11 @@ export async function loadDemoData(): Promise<{ summary?: Record<string, number>
   return res.json();
 }
 
+export async function resetDemoData(): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/demo/reset`, { method: "POST" });
+  if (!res.ok) throw new Error(`Demo reset failed: ${res.status}`);
+}
+
 export async function fetchDashboardConfig(): Promise<DashboardConfig> {
   const res = await fetch(`${API_BASE}/api/config`, { signal: AbortSignal.timeout(3000) });
   if (!res.ok) throw new Error(`Config check failed: ${res.status}`);

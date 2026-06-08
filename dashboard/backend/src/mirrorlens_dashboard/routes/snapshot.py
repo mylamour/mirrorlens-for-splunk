@@ -12,6 +12,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from mirrorlens_dashboard.bus import ALL_CHANNELS, bus
 
 router = APIRouter()
+_DEMO_REPLAY_VERSION = 0
 
 _DEMO_CANDIDATES = [
     Path(__file__).resolve().parents[5] / "examples" / "sample_investigation.json",
@@ -36,6 +37,7 @@ async def snapshot() -> dict[str, Any]:
 @router.post("/demo/load")
 async def load_demo(background_tasks: BackgroundTasks) -> dict[str, Any]:
     """Replay sample_investigation.json into the EventBus with realistic timing."""
+    global _DEMO_REPLAY_VERSION
     demo_path = next((p for p in _DEMO_CANDIDATES if p.is_file()), None)
     if not demo_path:
         raise HTTPException(status_code=404, detail="Sample investigation file not found")
@@ -47,17 +49,33 @@ async def load_demo(background_tasks: BackgroundTasks) -> dict[str, Any]:
 
     summary = payload.get("summary", {})
     sequence = _build_replay_sequence(payload.get("data", {}))
-    background_tasks.add_task(_replay, sequence)
+    _DEMO_REPLAY_VERSION += 1
+    replay_version = _DEMO_REPLAY_VERSION
+    await bus.clear()
+    background_tasks.add_task(_replay, sequence, replay_version)
     return {"ok": True, "mode": "replay", "events_queued": len(sequence), "summary": summary}
+
+
+@router.post("/demo/reset")
+async def reset_demo() -> dict[str, bool]:
+    """Clear replayed dashboard state and stop any active sample replay."""
+    global _DEMO_REPLAY_VERSION
+    _DEMO_REPLAY_VERSION += 1
+    await bus.clear()
+    return {"ok": True}
 
 
 # ── Replay helpers ────────────────────────────────────────────────────────────
 
-async def _replay(sequence: list[tuple[float, str, dict]]) -> None:
+async def _replay(sequence: list[tuple[float, str, dict]], replay_version: int) -> None:
     """Publish events with the given delays."""
     for delay, channel, event_payload in sequence:
+        if replay_version != _DEMO_REPLAY_VERSION:
+            return
         if delay > 0:
             await asyncio.sleep(delay)
+        if replay_version != _DEMO_REPLAY_VERSION:
+            return
         await bus.publish(channel, event_payload)
 
 

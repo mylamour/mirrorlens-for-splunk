@@ -42,7 +42,9 @@ def build_app() -> FastAPI:
     app.include_router(investigate_router, prefix="/api")
 
     if FRONTEND_DIST.is_dir():
-        app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
+        assets_dir = FRONTEND_DIST / "assets"
+        if assets_dir.is_dir():
+            app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
         @app.get("/{full_path:path}")
         async def serve_spa(full_path: str) -> FileResponse:

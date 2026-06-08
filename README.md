@@ -4,7 +4,7 @@
 
 > [中文文档](README.zh.md)
 
-MirrorLens is an autonomous AI security investigator that connects to Splunk via the official [Splunk MCP Server](https://dev.splunk.com/). It uses a Claude-powered ReAct loop to discover data, run SPL queries, build MITRE ATT&CK timelines, identify detection gaps, validate detection rules against live data, and enter continuous watch mode — all streamed to a real-time cyberpunk dashboard.
+MirrorLens is an autonomous AI security investigator that connects to Splunk via the official [Splunk MCP Server](https://dev.splunk.com/). It uses a Claude-powered ReAct loop to discover data, run SPL queries, summarize MITRE ATT&CK attack findings, identify detection gaps, validate detection rules against live data, and enter continuous watch mode — all streamed to a real-time cyberpunk dashboard.
 
 ---
 
@@ -37,7 +37,7 @@ MirrorLens is an autonomous AI security investigator that connects to Splunk via
 │  Real-Time Dashboard (React 19 + MUI + Framer Motion)               │
 │  ┌──────────┐ ┌───────────────────────────────────────┐             │
 │  │  Header  │ │ Result-first Dashboard                 │             │
-│  │  Phase   │ │ Attack Timeline · Detection Rules      │             │
+│  │  Phase   │ │ Attack Findings · Detection Rules      │             │
 │  │  Watch   │ │ Response Playbook                       │             │
 │  │  Trace   │ │ Discovery/Evidence as secondary context │             │
 │  │  Status  │ │ Agent Trace / MCP Proof drawer          │             │
@@ -184,7 +184,7 @@ click "Connect & Investigate".
 | Panel | Description |
 |-------|-------------|
 | **Header** | Phase progress (ReAct LOOP badge + iteration counter), WATCHING indicator, metric cards, LIVE status |
-| **Attack Timeline** | MITRE ATT&CK attack-chain view grouped by tactic stage, with related control-gap signals separated |
+| **Attack Findings** | MITRE ATT&CK-mapped suspicious behaviors with technique IDs, tactics, and supporting context |
 | **Detection Rules** | AI-generated SPL rules merged with live validation status and match count |
 | **Response Playbook** | Executive summary + numbered remediation actions with risk levels |
 | **Discovery & Evidence** | Collapsed supporting context with Splunk server info, indexes, fields, hosts, sourcetypes, and evidence queries |
@@ -299,8 +299,8 @@ All data is fully synthetic — no real hosts, IPs, or customer data.
 MirrorLens uses Claude AI via Anthropic's native `tool_use` API in a ReAct loop:
 
 1. **Autonomous Investigation** — Claude decides which tools to call, what SPL to run, and when to move to the next phase. No hardcoded workflow.
-2. **Evidence Analysis** — Builds a MITRE ATT&CK attack-chain view from raw Splunk events with technique IDs, tactic stages, hosts, and confidence scores.
-3. **Detection Gap Analysis** — Compares attack timeline against existing Splunk saved searches and alerts to find blind spots.
+2. **Evidence Analysis** — Summarizes MITRE ATT&CK-mapped findings from raw Splunk events with technique IDs, tactics, and confidence scores.
+3. **Detection Gap Analysis** — Compares attack findings against existing Splunk saved searches and alerts to find blind spots.
 4. **Rule Generation + Live Validation** — Generates SPL detection rules and tests them against live data to verify they fire.
 5. **Response Recommendations** — Categorized (containment/eradication/recovery) actions with risk levels.
 

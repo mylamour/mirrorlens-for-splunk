@@ -51,12 +51,12 @@ Evidence queries are available through Show Evidence & Gaps. Agent Trace / MCP P
 证据查询通过 Show Evidence & Gaps 查看。Agent Trace / MCP Proof 显示多个 `run_query` 调用。迭代计数器递增。
 
 **Narration (cont'd):**
-"Once it has enough evidence, it builds a MITRE ATT&CK attack-chain view, grouping techniques by tactic stage and separating related control gaps from the main path."
+"Once it has enough evidence, it summarizes MITRE ATT&CK-mapped attack findings and identifies detection gaps — suspicious behaviors where your Splunk instance has no corresponding alert."
 
 **画面 (1:35–1:55):**
-Attack Timeline becomes a primary result panel with stage groups, numbered attack-chain steps, technique IDs (T1190, T1059, etc.), host and confidence chips, and a separate related-signals group. Detection Gaps remain available through Show Evidence & Gaps.
+Attack Findings becomes a primary result panel with technique IDs (T1190, T1059, etc.) and tactic labels. Detection Gaps remain available through Show Evidence & Gaps.
 
-Attack Timeline 成为主结果面板，按阶段展示编号攻击链步骤，包含技术 ID、主机和置信度标签，并单独展示相关信号。Detection Gaps 通过 Show Evidence & Gaps 保留。
+Attack Findings 成为主结果面板，含技术 ID 和战术标签。Detection Gaps 通过 Show Evidence & Gaps 保留。
 
 ---
 
@@ -95,9 +95,9 @@ Response Playbook 面板填入执行摘要和编号操作。"WATCHING" 徽章（
 ## Scene 7: Value Prop (2:50–3:00) / 场景7：价值主张
 
 **Narration:**
-"In under three minutes, MirrorLens autonomously completed what typically takes a security analyst two to four hours — discovering data across multiple indexes, running dozens of targeted queries, building a MITRE ATT&CK timeline, identifying detection gaps, generating and validating SPL detection rules against live data, and producing a response playbook. All through the Splunk MCP Server — zero manual queries, zero hardcoded logic, fully autonomous."
+"In under three minutes, MirrorLens autonomously completed what typically takes a security analyst two to four hours — discovering data across multiple indexes, running dozens of targeted queries, summarizing MITRE ATT&CK findings, identifying detection gaps, generating and validating SPL detection rules against live data, and producing a response playbook. All through the Splunk MCP Server — zero manual queries, zero hardcoded logic, fully autonomous."
 
 **画面:**
-Pull back to show the result-first dashboard: Attack Timeline, Detection Rules, and Response Playbook, with WATCHING badge pulsing. Open Agent Trace / MCP Proof briefly to show MCP evidence. Overlay key metrics: "X indexes scanned · Y queries executed · Z rules validated · N minutes". Fade to MirrorLens logo + "Built with Splunk MCP Server."
+Pull back to show the result-first dashboard: Attack Findings, Detection Rules, and Response Playbook, with WATCHING badge pulsing. Open Agent Trace / MCP Proof briefly to show MCP evidence. Overlay key metrics: "X indexes scanned · Y queries executed · Z rules validated · N minutes". Fade to MirrorLens logo + "Built with Splunk MCP Server."
 
-全景展示结果优先的仪表盘：Attack Timeline、Detection Rules、Response Playbook，WATCHING 标签脉冲。短暂打开 Agent Trace / MCP Proof 展示 MCP 证据。叠加关键指标："X 个索引扫描 · Y 个查询执行 · Z 条规则验证 · N 分钟"。淡入 MirrorLens logo + "Built with Splunk MCP Server."
+全景展示结果优先的仪表盘：Attack Findings、Detection Rules、Response Playbook，WATCHING 标签脉冲。短暂打开 Agent Trace / MCP Proof 展示 MCP 证据。叠加关键指标："X 个索引扫描 · Y 个查询执行 · Z 条规则验证 · N 分钟"。淡入 MirrorLens logo + "Built with Splunk MCP Server."

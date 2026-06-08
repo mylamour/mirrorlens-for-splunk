@@ -232,7 +232,7 @@ export default function CenterPanel() {
 }
 
 const DETAIL_TITLES: Record<DetailItem["type"], string> = {
-  timeline: "Attack Step Detail",
+  timeline: "Attack Finding Detail",
   gap: "Detection Gap Detail",
   usecase: "Detection Rule Detail",
   validation: "Rule Validation Detail",
@@ -697,205 +697,27 @@ function InfoChip({ label, value, color }: { label: string; value: string; color
 
 /* ---------- Timeline ---------- */
 
-type TimelineEntry = Record<string, string>;
-
-type AttackChainItem = {
-  entry: TimelineEntry;
-  originalIndex: number;
-  stepNumber: string;
-};
-
-type AttackChainGroup = {
-  key: string;
-  label: string;
-  related?: boolean;
-  items: AttackChainItem[];
-};
-
-const CHAIN_STAGE_ORDER = [
-  "Initial Access",
-  "Credential Access",
-  "Execution",
-  "Persistence",
-  "Privilege Escalation",
-  "Defense Evasion",
-  "Discovery",
-  "Lateral Movement",
-  "Command and Control",
-  "Collection",
-  "Exfiltration",
-  "Impact",
-] as const;
-
-const chainRail = {
-  position: "absolute",
-  left: 13,
-  top: 31,
-  bottom: -10,
-  width: "1px",
-  background: `linear-gradient(180deg, ${COLORS.red}88, ${COLORS.amber}44)`,
-};
-
 function TimelineSection({ analysis, onSelect }: { analysis: DataHook["analysis"]; onSelect: (d: Record<string, unknown>) => void }) {
   const tl = analysis.find((a) => a.type === "timeline");
-  const entries = (tl?.data ?? []) as TimelineEntry[];
-  const groups = buildAttackChainGroups(entries);
+  const entries = (tl?.data ?? []) as Array<Record<string, string>>;
   const summary = tl?.summary ?? "";
 
   return (
-    <GlassCard title="Attack Timeline" subtitle={`${entries.length} findings · ${groups.length} stages`} accent="red">
+    <GlassCard title="Attack Findings" subtitle={`${entries.length} findings`} accent="red">
       {summary && <Typography variant="body2" sx={{ mb: 0.75, color: "grey.300", lineHeight: 1.5, fontSize: 14, ...SUMMARY_LINE_CLAMP }}>{summary}</Typography>}
       <AnimatePresence>
-        {groups.map((group, groupIndex) => (
-          <motion.div key={group.key} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: groupIndex * 0.05 }}>
-            <Box sx={{ mb: 0.75 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.25 }}>
-                <Typography variant="caption" sx={{ color: group.related ? "grey.500" : COLORS.amber, fontFamily: "'Orbitron'", fontWeight: 700, fontSize: 11 }}>
-                  {group.label}
-                </Typography>
-                <Box sx={{ height: 1, flex: 1, background: group.related ? "rgba(255,255,255,0.06)" : `${COLORS.amber}22` }} />
-                <Typography variant="caption" sx={{ color: "grey.600", fontSize: 11 }}>{group.items.length}</Typography>
-              </Box>
-
-              {group.items.map((item, itemIndex) => {
-                const step = item.entry;
-                const confidence = (step.confidence ?? "").toUpperCase();
-                const confidenceColor = confidence === "HIGH" ? "green" : confidence === "LOW" ? "red" : undefined;
-                return (
-                  <motion.div key={`${group.key}-${item.originalIndex}`} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: (groupIndex + itemIndex) * 0.04 }}>
-                    <Box
-                      sx={{
-                        position: "relative",
-                        pl: 4,
-                        pr: 0.5,
-                        py: 0.5,
-                        borderBottom: "1px solid rgba(255,255,255,0.05)",
-                        ...clickableRow,
-                      }}
-                      onClick={() => onSelect(step)}
-                    >
-                      {itemIndex < group.items.length - 1 && <Box sx={chainRail} />}
-                      <Box
-                        sx={{
-                          position: "absolute",
-                          left: 0,
-                          top: 7,
-                          width: 27,
-                          height: 23,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          borderRadius: 0.75,
-                          border: `1px solid ${group.related ? "rgba(255,255,255,0.18)" : COLORS.red}`,
-                          background: group.related ? "rgba(255,255,255,0.04)" : `${COLORS.red}16`,
-                          color: group.related ? "grey.500" : COLORS.cyan,
-                          fontFamily: "'JetBrains Mono'",
-                          fontSize: 10,
-                          fontWeight: 800,
-                        }}
-                      >
-                        {item.stepNumber}
-                      </Box>
-
-                      <Box sx={{ minWidth: 0 }}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0, mb: 0.15 }}>
-                          <Typography variant="caption" sx={{ color: group.related ? "grey.500" : COLORS.red, fontWeight: 800, fontSize: 12, flexShrink: 0 }}>
-                            {step.technique_id || "N/A"}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: COLORS.amber, fontWeight: 700, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {step.tactic || "Related Signal"}
-                          </Typography>
-                        </Box>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: "grey.300",
-                            fontSize: 13,
-                            lineHeight: 1.35,
-                            display: "-webkit-box",
-                            WebkitBoxOrient: "vertical",
-                            WebkitLineClamp: 2,
-                            overflow: "hidden",
-                          }}
-                        >
-                          {step.description}
-                        </Typography>
-                        <Box sx={{ mt: 0.35, display: "flex", flexWrap: "wrap", gap: 1 }}>
-                          {step.host && <InfoChip label="Host" value={step.host} color="green" />}
-                          {confidence && <InfoChip label="Confidence" value={confidence} color={confidenceColor} />}
-                        </Box>
-                      </Box>
-                    </Box>
-                  </motion.div>
-                );
-              })}
+        {entries.map((step, i) => (
+          <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}>
+            <Box sx={{ py: 0.5, borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", gap: 1, ...clickableRow }} onClick={() => onSelect(step)}>
+              <Typography variant="caption" sx={{ color: COLORS.red, fontWeight: 700, minWidth: 60, fontSize: 13 }}>{step.technique_id}</Typography>
+              <Typography variant="caption" sx={{ color: COLORS.amber, minWidth: 80, fontSize: 13 }}>{step.tactic}</Typography>
+              <Typography variant="caption" sx={{ color: "grey.300", flex: 1, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{step.description}</Typography>
             </Box>
           </motion.div>
         ))}
       </AnimatePresence>
     </GlassCard>
   );
-}
-
-function buildAttackChainGroups(entries: TimelineEntry[]): AttackChainGroup[] {
-  const grouped = new Map<string, Array<Omit<AttackChainItem, "stepNumber">>>();
-  const related: Array<Omit<AttackChainItem, "stepNumber">> = [];
-
-  entries.forEach((entry, originalIndex) => {
-    const item = { entry, originalIndex };
-    if (isRelatedSignal(entry)) {
-      related.push(item);
-      return;
-    }
-
-    const stage = resolveAttackStage(entry.tactic);
-    if (!stage) {
-      related.push(item);
-      return;
-    }
-
-    const existing = grouped.get(stage) ?? [];
-    existing.push(item);
-    grouped.set(stage, existing);
-  });
-
-  let chainStep = 1;
-  const groups: AttackChainGroup[] = CHAIN_STAGE_ORDER.flatMap((stage) => {
-    const items = grouped.get(stage) ?? [];
-    if (items.length === 0) return [];
-    return [{
-      key: stage,
-      label: stage,
-      items: items.map((item) => ({
-        ...item,
-        stepNumber: String(chainStep++).padStart(2, "0"),
-      })),
-    }];
-  });
-
-  if (related.length > 0) {
-    groups.push({
-      key: "related",
-      label: "Control Gaps / Related Signals",
-      related: true,
-      items: related.map((item, index) => ({
-        ...item,
-        stepNumber: `R${index + 1}`,
-      })),
-    });
-  }
-
-  return groups;
-}
-
-function isRelatedSignal(entry: TimelineEntry): boolean {
-  const technique = (entry.technique_id ?? "").trim().toUpperCase();
-  return !technique || technique === "N/A";
-}
-
-function resolveAttackStage(tactic = ""): string | undefined {
-  const normalized = tactic.toLowerCase();
-  return CHAIN_STAGE_ORDER.find((stage) => normalized.includes(stage.toLowerCase()));
 }
 
 /* ---------- Gaps ---------- */

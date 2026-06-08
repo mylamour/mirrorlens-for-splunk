@@ -53,12 +53,10 @@ def test_supporting_context_is_collapsed_by_default():
     assert "primaryPanels.length > 0 && secondaryPanels.length > 0 && showSupportingContext" in center
 
 
-def test_attack_timeline_is_grouped_as_attack_chain():
+def test_dashboard_labels_timeline_panel_as_attack_findings():
     root = Path(__file__).resolve().parents[1]
     center = (root / "dashboard/frontend/src/components/CenterPanel.tsx").read_text()
 
-    assert "CHAIN_STAGE_ORDER" in center
-    assert "buildAttackChainGroups(entries)" in center
-    assert "Control Gaps / Related Signals" in center
-    assert "stepNumber" in center
-    assert "chainRail" in center
+    assert 'GlassCard title="Attack Findings"' in center
+    assert 'GlassCard title="Attack Timeline"' not in center
+    assert 'timeline: "Attack Finding Detail"' in center

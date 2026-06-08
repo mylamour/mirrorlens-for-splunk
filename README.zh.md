@@ -164,7 +164,7 @@ pnpm dev
 | 面板 | 描述 |
 |------|------|
 | **顶部栏** | 阶段进度（ReAct LOOP 徽章 + 迭代计数器）、WATCHING 指示器、指标卡、实时状态 |
-| **Attack Timeline** | MITRE ATT&CK 技术时间线与战术映射 |
+| **Attack Timeline** | 按 MITRE ATT&CK 战术阶段分组的攻击链视图，并单独展示相关控制缺口信号 |
 | **Detection Rules** | AI 生成的 SPL 检测规则与实时验证状态、匹配数合并展示 |
 | **Response Playbook** | 执行摘要 + 编号的修复操作及风险等级 |
 | **Discovery & Evidence** | 默认折叠的辅助上下文：Splunk 服务器信息、索引、字段、主机、源类型、证据查询 |
@@ -233,7 +233,7 @@ ReAct 调查完成后：
 MirrorLens 通过 Anthropic 原生 `tool_use` API 在 ReAct 循环中使用 Claude AI：
 
 1. **自主调查** — Claude 自主决定调用哪些工具、执行什么 SPL、何时进入下一阶段。无硬编码流程，AI 根据发现自适应调整。
-2. **证据分析** — 从原始 Splunk 事件构建 MITRE ATT&CK 时间线，含技术 ID、战术、置信度。
+2. **证据分析** — 从原始 Splunk 事件构建 MITRE ATT&CK 攻击链视图，含技术 ID、战术阶段、主机和置信度。
 3. **检测盲区分析** — 将攻击时间线与现有 Splunk 保存的搜索和告警比对，发现检测盲区。
 4. **规则生成 + 实时验证** — 生成 SPL 检测规则并在 Splunk 实时数据上验证其是否会触发。
 5. **响应建议** — 生成分类的（遏制/根除/恢复）响应操作及风险等级。

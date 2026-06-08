@@ -51,3 +51,14 @@ def test_supporting_context_is_collapsed_by_default():
     assert "SHOW EVIDENCE & GAPS" in center
     assert "HIDE EVIDENCE & GAPS" in center
     assert "primaryPanels.length > 0 && secondaryPanels.length > 0 && showSupportingContext" in center
+
+
+def test_attack_timeline_is_grouped_as_attack_chain():
+    root = Path(__file__).resolve().parents[1]
+    center = (root / "dashboard/frontend/src/components/CenterPanel.tsx").read_text()
+
+    assert "CHAIN_STAGE_ORDER" in center
+    assert "buildAttackChainGroups(entries)" in center
+    assert "Control Gaps / Related Signals" in center
+    assert "stepNumber" in center
+    assert "chainRail" in center

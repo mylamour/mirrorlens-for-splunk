@@ -51,12 +51,12 @@ Evidence queries are available through Show Evidence & Gaps. Agent Trace / MCP P
 证据查询通过 Show Evidence & Gaps 查看。Agent Trace / MCP Proof 显示多个 `run_query` 调用。迭代计数器递增。
 
 **Narration (cont'd):**
-"Once it has enough evidence, it builds a MITRE ATT&CK timeline showing each attack technique, and identifies detection gaps — attack steps where your Splunk instance has no corresponding alert."
+"Once it has enough evidence, it builds a MITRE ATT&CK attack-chain view, grouping techniques by tactic stage and separating related control gaps from the main path."
 
 **画面 (1:35–1:55):**
-Attack Timeline becomes a primary result panel with technique IDs (T1190, T1059, etc.) and tactic labels. Detection Gaps remain available through Show Evidence & Gaps.
+Attack Timeline becomes a primary result panel with stage groups, numbered attack-chain steps, technique IDs (T1190, T1059, etc.), host and confidence chips, and a separate related-signals group. Detection Gaps remain available through Show Evidence & Gaps.
 
-Attack Timeline 成为主结果面板，含技术 ID 和战术标签。Detection Gaps 通过 Show Evidence & Gaps 保留。
+Attack Timeline 成为主结果面板，按阶段展示编号攻击链步骤，包含技术 ID、主机和置信度标签，并单独展示相关信号。Detection Gaps 通过 Show Evidence & Gaps 保留。
 
 ---
 

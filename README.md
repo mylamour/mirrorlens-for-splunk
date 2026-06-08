@@ -184,7 +184,7 @@ click "Connect & Investigate".
 | Panel | Description |
 |-------|-------------|
 | **Header** | Phase progress (ReAct LOOP badge + iteration counter), WATCHING indicator, metric cards, LIVE status |
-| **Attack Timeline** | MITRE ATT&CK technique timeline with tactic mapping |
+| **Attack Timeline** | MITRE ATT&CK attack-chain view grouped by tactic stage, with related control-gap signals separated |
 | **Detection Rules** | AI-generated SPL rules merged with live validation status and match count |
 | **Response Playbook** | Executive summary + numbered remediation actions with risk levels |
 | **Discovery & Evidence** | Collapsed supporting context with Splunk server info, indexes, fields, hosts, sourcetypes, and evidence queries |
@@ -299,7 +299,7 @@ All data is fully synthetic — no real hosts, IPs, or customer data.
 MirrorLens uses Claude AI via Anthropic's native `tool_use` API in a ReAct loop:
 
 1. **Autonomous Investigation** — Claude decides which tools to call, what SPL to run, and when to move to the next phase. No hardcoded workflow.
-2. **Evidence Analysis** — Builds MITRE ATT&CK timeline from raw Splunk events with technique IDs, tactics, confidence scores.
+2. **Evidence Analysis** — Builds a MITRE ATT&CK attack-chain view from raw Splunk events with technique IDs, tactic stages, hosts, and confidence scores.
 3. **Detection Gap Analysis** — Compares attack timeline against existing Splunk saved searches and alerts to find blind spots.
 4. **Rule Generation + Live Validation** — Generates SPL detection rules and tests them against live data to verify they fire.
 5. **Response Recommendations** — Categorized (containment/eradication/recovery) actions with risk levels.

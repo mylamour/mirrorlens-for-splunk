@@ -13,7 +13,9 @@ export default function Header({ showTrace = false, onOpenTrace }: { showTrace?:
 
   const indexCount = discovery.find((d) => d.type === "indexes")?.count ?? 0;
   const hostCount = discovery.find((d) => d.type === "hosts")?.count ?? 0;
-  const evtCount = evidence.find((e) => e.type === "collection_complete")?.deduplicated ?? 0;
+  const matchCount = analysis
+    .filter((a) => a.type === "rule_validation")
+    .reduce((sum, rule) => sum + (rule.match_count ?? 0), 0);
   const gapCount = analysis.find((a) => a.type === "gaps")?.data?.length ?? 0;
   const hasDashboardState =
     discovery.length > 0 ||
@@ -67,7 +69,7 @@ export default function Header({ showTrace = false, onOpenTrace }: { showTrace?:
       <Box sx={{ ml: "auto", display: { xs: "none", md: "flex" }, gap: 2 }}>
         <MetricCard label="Indexes" value={indexCount} accent="cyan" />
         <MetricCard label="Hosts" value={hostCount} accent="green" />
-        <MetricCard label="Events" value={evtCount} accent="amber" />
+        <MetricCard label="Matches" value={matchCount} accent="amber" />
         <MetricCard label="Gaps" value={gapCount} accent="red" />
       </Box>
 

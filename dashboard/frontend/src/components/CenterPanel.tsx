@@ -316,6 +316,13 @@ const clickableRow = {
   "&:hover": { background: "rgba(255,255,255,0.04)" },
 };
 
+const SUMMARY_LINE_CLAMP = {
+  display: "-webkit-box",
+  WebkitLineClamp: 4,
+  WebkitBoxOrient: "vertical",
+  overflow: "hidden",
+};
+
 /* ---------- Connection Setup ---------- */
 
 const neonInput = {
@@ -657,7 +664,7 @@ function TimelineSection({ analysis, onSelect }: { analysis: DataHook["analysis"
 
   return (
     <GlassCard title="Attack Timeline" subtitle={`${entries.length} steps`} accent="red">
-      {summary && <Typography variant="body2" sx={{ mb: 0.75, color: "grey.300", lineHeight: 1.5, fontSize: 14 }}>{summary}</Typography>}
+      {summary && <Typography variant="body2" sx={{ mb: 0.75, color: "grey.300", lineHeight: 1.5, fontSize: 14, ...SUMMARY_LINE_CLAMP }}>{summary}</Typography>}
       <AnimatePresence>
         {entries.map((step, i) => (
           <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}>
@@ -715,22 +722,29 @@ function DetectionRulesSection({ analysis, validations, onSelect }: {
 }) {
   const ucEvt = analysis.find((a) => a.type === "use_cases");
   const useCases = (ucEvt?.data ?? []) as Array<Record<string, string>>;
-  const testedRules = validations.filter((v) => v.type === "rule_validation");
+  const testedRules = dedupeRuleValidations(validations.filter((v) => v.type === "rule_validation"));
   const usedValidationIndexes = new Set<number>();
+  const unmatchedGeneratedRows: DetectionRuleRow[] = [];
 
-  const rows: DetectionRuleRow[] = useCases.map((uc, i) => {
+  const rows: DetectionRuleRow[] = [];
+  useCases.forEach((uc, i) => {
     const matchIndex = testedRules.findIndex((rule, validationIndex) => {
       if (usedValidationIndexes.has(validationIndex)) return false;
       const sameName = normalizeRuleName(rule.rule_name) === normalizeRuleName(uc.name);
       const sameSpl = rule.spl && uc.spl_query && rule.spl.trim() === uc.spl_query.trim();
       return sameName || sameSpl;
     });
-    if (matchIndex >= 0) usedValidationIndexes.add(matchIndex);
-    return {
+    const row = {
       key: `generated-${i}-${uc.name ?? "rule"}`,
       generated: uc,
       validation: matchIndex >= 0 ? testedRules[matchIndex] : undefined,
     };
+    if (matchIndex >= 0) {
+      usedValidationIndexes.add(matchIndex);
+      rows.push(row);
+    } else {
+      unmatchedGeneratedRows.push(row);
+    }
   });
 
   testedRules.forEach((rule, i) => {
@@ -739,16 +753,20 @@ function DetectionRulesSection({ analysis, validations, onSelect }: {
     }
   });
 
+  const pendingSlots = Math.max(0, useCases.length - testedRules.length);
+  rows.push(...unmatchedGeneratedRows.slice(0, pendingSlots));
+
+  const sortedRows = sortDetectionRuleRows(rows);
+
   return (
     <GlassCard title="Detection Rules" subtitle={`${useCases.length} generated · ${testedRules.length} tested`} accent="green">
-      {rows.map((row, i) => {
+      {sortedRows.map((row, i) => {
         const generated = row.generated;
         const validation = row.validation;
         const priority = generated?.priority ?? "P3";
         const sc = SEVERITY_COLOR[priority] ?? "green";
         const name = generated?.name ?? validation?.rule_name ?? "Unnamed Rule";
         const technique = generated?.mitre_technique ?? "";
-        const spl = validation?.spl ?? generated?.spl_query;
         const matchCount = validation?.match_count;
         const fired = (matchCount ?? 0) > 0;
         const detailType = validation ? "validation" : "usecase";
@@ -772,14 +790,6 @@ function DetectionRulesSection({ analysis, validations, onSelect }: {
                   {validation ? fired ? `${matchCount} MATCHES` : "0 MATCHES" : "PENDING"}
                 </Typography>
               </Box>
-              {spl && (
-                <Typography variant="caption" sx={{ color: COLORS.cyan, fontSize: 11, fontFamily: "'JetBrains Mono'", display: "block", mt: 0.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {spl}
-                </Typography>
-              )}
-              {generated?.alert_condition && (
-                <Typography variant="caption" sx={{ color: COLORS.amber, fontSize: 12, mt: 0.2, display: "block" }}>Alert: {generated.alert_condition}</Typography>
-              )}
             </Box>
           </motion.div>
         );
@@ -790,6 +800,37 @@ function DetectionRulesSection({ analysis, validations, onSelect }: {
 
 function normalizeRuleName(name?: string) {
   return (name ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function dedupeRuleValidations(rules: DataHook["analysis"]) {
+  const byKey = new Map<string, DataHook["analysis"][number]>();
+  for (const rule of rules) {
+    const key = normalizeRuleName(rule.rule_name) || (rule.spl ?? "").trim();
+    if (!key) continue;
+    const existing = byKey.get(key);
+    if (!existing || (rule.match_count ?? 0) > (existing.match_count ?? 0)) {
+      byKey.set(key, rule);
+    }
+  }
+  return [...byKey.values()];
+}
+
+function sortDetectionRuleRows(rows: DetectionRuleRow[]) {
+  const priorityRank: Record<string, number> = { P1: 1, CRITICAL: 1, HIGH: 1, P2: 2, MEDIUM: 2, P3: 3, LOW: 3 };
+  return [...rows].sort((a, b) => {
+    const aMatches = a.validation?.match_count ?? 0;
+    const bMatches = b.validation?.match_count ?? 0;
+    if ((bMatches > 0) !== (aMatches > 0)) return bMatches > 0 ? 1 : -1;
+    if (bMatches !== aMatches) return bMatches - aMatches;
+
+    const aPriority = priorityRank[a.generated?.priority ?? "P3"] ?? 9;
+    const bPriority = priorityRank[b.generated?.priority ?? "P3"] ?? 9;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+
+    const aName = a.generated?.name ?? a.validation?.rule_name ?? "";
+    const bName = b.generated?.name ?? b.validation?.rule_name ?? "";
+    return aName.localeCompare(bName);
+  });
 }
 
 /* ---------- Rule Match Alert Overlay ---------- */
@@ -949,16 +990,17 @@ function RecommendSection({ recommendations, onSelect }: { recommendations: Data
   const latest = recommendations[recommendations.length - 1];
   const recs = (latest?.data ?? []) as Array<Record<string, string>>;
   const summary = latest?.executive_summary ?? "";
+  const visibleRecommendations = recs.slice(0, 3);
 
   return (
     <GlassCard title="Response Playbook" subtitle={summary ? "Complete" : `${recs.length} actions`} accent="amber">
       {summary && (
         <Box sx={{ mb: 1, pb: 0.75, borderBottom: `1px solid ${COLORS.green}33` }}>
           <Typography variant="caption" sx={{ color: COLORS.green, fontWeight: 700, fontFamily: "'Orbitron'", fontSize: 12, mb: 0.25, display: "block" }}>EXECUTIVE SUMMARY</Typography>
-          <Typography variant="body2" sx={{ color: "grey.200", lineHeight: 1.6, fontSize: 14 }}>{summary}</Typography>
+          <Typography variant="body2" sx={{ color: "grey.200", lineHeight: 1.6, fontSize: 14, ...SUMMARY_LINE_CLAMP }}>{summary}</Typography>
         </Box>
       )}
-      {recs.map((rec, i) => (
+      {visibleRecommendations.map((rec, i) => (
         <motion.div key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }}>
           <Box sx={{ py: 0.5, borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", gap: 1, ...clickableRow }} onClick={() => onSelect(rec)}>
             <Typography variant="caption" sx={{ fontFamily: "'Orbitron'", color: COLORS.cyan, fontWeight: 700, minWidth: 20, fontSize: 13 }}>{i + 1}</Typography>
@@ -978,6 +1020,11 @@ function RecommendSection({ recommendations, onSelect }: { recommendations: Data
           </Box>
         </motion.div>
       ))}
+      {recs.length > visibleRecommendations.length && (
+        <Typography variant="caption" sx={{ color: "grey.500", fontFamily: "'Orbitron'", fontSize: 11, letterSpacing: 1, display: "block", mt: 0.75 }}>
+          +{recs.length - visibleRecommendations.length} MORE ACTIONS
+        </Typography>
+      )}
     </GlassCard>
   );
 }

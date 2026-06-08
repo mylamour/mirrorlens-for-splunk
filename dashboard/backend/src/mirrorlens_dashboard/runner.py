@@ -8,7 +8,9 @@ import time
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
+import httpx
 from mirrorlens.config import Settings
 from mirrorlens.mcp_client import SplunkMCPClient
 from mirrorlens.react_loop import react_investigate
@@ -126,10 +128,11 @@ class InvestigationRunner:
                     self._watch_loop(watch_interval)
                 )
         except Exception as exc:
+            error = _format_investigation_error(exc, self._settings)
             log.exception("Investigation failed")
             await self._emit("status", {
                 "event": "error",
-                "error": str(exc),
+                "error": error,
                 "elapsed_seconds": round(self.elapsed, 1),
             })
         finally:
@@ -221,3 +224,47 @@ class InvestigationRunner:
 
     def set_phase(self, phase: str) -> None:
         self._phase = phase
+
+
+def _format_investigation_error(
+    exc: BaseException,
+    settings: Settings | None = None,
+) -> str:
+    root = _first_leaf_exception(exc)
+    if isinstance(root, httpx.ConnectError):
+        return (
+            "Unable to connect to Splunk MCP endpoint"
+            f"{_safe_endpoint(settings.splunk_mcp_url if settings else '')}. "
+            "Verify SPLUNK_MCP_URL, network reachability, port/protocol, TLS "
+            "settings, and that the Splunk MCP Server is running."
+        )
+
+    if root is not exc:
+        return str(root) or root.__class__.__name__
+    return str(exc) or exc.__class__.__name__
+
+
+def _first_leaf_exception(exc: BaseException) -> BaseException:
+    if isinstance(exc, BaseExceptionGroup) and exc.exceptions:
+        return _first_leaf_exception(exc.exceptions[0])
+    return exc
+
+
+def _safe_endpoint(url: str) -> str:
+    if not url:
+        return ""
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return " at configured Splunk MCP endpoint"
+
+    if not parsed.scheme or not parsed.hostname:
+        return " at configured Splunk MCP endpoint"
+
+    host = parsed.hostname
+    if ":" in host and not host.startswith("["):
+        host = f"[{host}]"
+    if parsed.port:
+        host = f"{host}:{parsed.port}"
+    path = parsed.path or "/"
+    return f" at {parsed.scheme}://{host}{path}"

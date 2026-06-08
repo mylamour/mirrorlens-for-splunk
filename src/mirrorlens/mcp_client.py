@@ -100,6 +100,7 @@ class SplunkMCPClient:
             headers=headers,
             timeout=httpx.Timeout(30, read=300),
             verify=self._verify_ssl,
+            trust_env=False,
         )
         async with streamable_http_client(
             url=self._url,

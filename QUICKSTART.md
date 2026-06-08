@@ -100,9 +100,9 @@ If you want to use the included synthetic attack data:
 
 ```bash
 # Requires SPLUNK_HEC_URL and SPLUNK_HEC_TOKEN in .env
-uv run mirrorlens ingest
+uv run mirrorlens ingest examples/incident_events.jsonl
 
-# Or run the full demo (ingest + investigate via CLI)
+# Then run the CLI investigation
 uv run mirrorlens demo
 ```
 
@@ -202,8 +202,8 @@ pnpm dev
 
 ```bash
 # 需要在 .env 中配置 SPLUNK_HEC_URL 和 SPLUNK_HEC_TOKEN
-uv run mirrorlens ingest
+uv run mirrorlens ingest examples/incident_events.jsonl
 
-# 完整演示（导入 + CLI 调查）
+# 然后运行 CLI 调查
 uv run mirrorlens demo
 ```

@@ -138,9 +138,9 @@ docker compose up --build
 #### 命令行模式
 
 ```bash
-uv run mirrorlens demo          # 导入演示数据 + 运行调查
-uv run mirrorlens ingest        # 向 Splunk 导入演示数据
-uv run mirrorlens investigate   # 运行 AI 调查
+uv run mirrorlens ingest examples/incident_events.jsonl  # 向 Splunk 导入演示数据
+uv run mirrorlens demo                                  # 运行 AI 调查
+uv run mirrorlens investigate                           # 运行 AI 调查
 ```
 
 #### 仪表盘开发模式

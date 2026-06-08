@@ -81,18 +81,13 @@ def investigate_cmd(index: str | None) -> None:
 
 
 @main.command()
-@click.option("--skip-ingest", is_flag=True, help="Skip data ingest step")
-def demo(skip_ingest: bool) -> None:
-    """Run the full demo: ingest sample data + auto-discover + investigate."""
-    from mirrorlens.ingest import ingest_events
+def demo() -> None:
+    """Run auto-discovery and AI investigation via Splunk MCP."""
     from mirrorlens.report import render_report
     from mirrorlens.workflow import investigate
 
     settings = Settings.from_env()
 
-    if not skip_ingest:
-        console.print("[bold]Step 1: Skipping ingest (use --skip-ingest or provide events via 'ingest' command)[/bold]")
-
-    console.print("[bold]Step 2: Auto-discovering and investigating via Splunk MCP...[/bold]\n")
+    console.print("[bold]Auto-discovering and investigating via Splunk MCP...[/bold]\n")
     result = asyncio.run(investigate(settings))
     render_report(result, console)

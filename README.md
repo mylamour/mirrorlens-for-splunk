@@ -155,9 +155,9 @@ docker compose up --build
 #### CLI Mode
 
 ```bash
-uv run mirrorlens demo          # ingest demo data + run investigation
-uv run mirrorlens ingest        # send demo data to Splunk
-uv run mirrorlens investigate   # run AI investigation
+uv run mirrorlens ingest examples/incident_events.jsonl  # send demo data to Splunk
+uv run mirrorlens demo                                  # run AI investigation
+uv run mirrorlens investigate                           # run AI investigation
 ```
 
 #### Dashboard Dev Mode
@@ -313,9 +313,8 @@ All AI analysis is **read-only and advisory** — no automated responses are exe
 ## Tests
 
 ```bash
-uv run pytest tests/ -v                          # all unit tests
-uv run pytest tests/ -v -m "not integration"     # skip live Splunk tests
-uv run pytest tests/ -v -m integration           # live integration only
+uv run python -m pytest -q                    # unit tests; skips live Splunk integration by default
+uv run python -m pytest -q -m integration     # live Splunk integration only
 ```
 
 ---

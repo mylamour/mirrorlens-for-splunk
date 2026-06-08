@@ -35,13 +35,13 @@ MirrorLens is an autonomous AI security investigator that connects to Splunk via
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │  Real-Time Dashboard (React 19 + MUI + Framer Motion)               │
-│  ┌──────────┐ ┌───────────────────┐ ┌─────────────────┐             │
-│  │  Header   │ │   Center Panels   │ │  AI Activity    │             │
-│  │  Phase    │ │   Discovery       │ │  AI Reasoning   │             │
-│  │  Progress │ │   Timeline        │ │  Splunk MCP     │             │
-│  │  Watch    │ │   Rules + Gaps    │ │  Calls          │             │
-│  │  Status   │ │   Playbook        │ │                 │             │
-│  └──────────┘ └───────────────────┘ └─────────────────┘             │
+│  ┌──────────┐ ┌───────────────────────────────────────┐             │
+│  │  Header  │ │ Result-first Dashboard                 │             │
+│  │  Phase   │ │ Attack Timeline · Detection Rules      │             │
+│  │  Watch   │ │ Response Playbook                       │             │
+│  │  Trace   │ │ Discovery/Evidence as secondary context │             │
+│  │  Status  │ │ Agent Trace / MCP Proof drawer          │             │
+│  └──────────┘ └───────────────────────────────────────┘             │
 │        ↑ WebSocket /api/stream                                       │
 ├─────────────────────────────────────────────────────────────────────┤
 │  Dashboard Backend (FastAPI + EventBus)                              │
@@ -184,14 +184,12 @@ click "Connect & Investigate".
 | Panel | Description |
 |-------|-------------|
 | **Header** | Phase progress (ReAct LOOP badge + iteration counter), WATCHING indicator, metric cards, LIVE status |
-| **Discovery & Evidence** | Splunk server info, indexes with event counts, field discovery, hosts, sourcetypes, evidence queries |
 | **Attack Timeline** | MITRE ATT&CK technique timeline with tactic mapping |
-| **Generated Detection Rules** | AI-generated SPL detection rules with priority and MITRE mapping |
-| **Detection Gaps** | Severity-rated gaps where attack steps lack detection coverage |
-| **Validated Detection Rules** | Rules tested against live Splunk data with match count |
+| **Detection Rules** | AI-generated SPL rules merged with live validation status and match count |
 | **Response Playbook** | Executive summary + numbered remediation actions with risk levels |
-| **AI Reasoning** (sidebar) | Real-time ReAct reasoning stages |
-| **Splunk MCP** (sidebar) | Live MCP tool calls with SPL, status, row counts |
+| **Discovery & Evidence** | Secondary context with Splunk server info, indexes, fields, hosts, sourcetypes, and evidence queries |
+| **Detection Gaps** | Secondary context for attack steps that lack detection coverage |
+| **Agent Trace / MCP Proof** | Drawer with real-time ReAct reasoning stages and Splunk MCP tool calls, SPL, status, and row counts |
 
 ### Rule Match Alert
 

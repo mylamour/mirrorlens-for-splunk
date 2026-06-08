@@ -80,33 +80,39 @@ export default function CenterPanel() {
   const ucData = analysis.find((a) => a.type === "use_cases");
   const validations = analysis.filter((a) => a.type === "rule_validation");
 
-  const hasOtherPanels =
+  const hasResultPanels =
     (tlData && (tlData.data?.length ?? 0) > 0) ||
     (gapData && (gapData.data?.length ?? 0) > 0) ||
     (ucData && (ucData.data?.length ?? 0) > 0) ||
     validations.length > 0 ||
     recommendations.some((r) => (r.data?.length ?? 0) > 0 || r.executive_summary);
 
-  const allPanels: Array<{ key: string; node: React.ReactNode }> = [];
+  const primaryPanels: Array<{ key: string; node: React.ReactNode }> = [];
+  const secondaryPanels: Array<{ key: string; node: React.ReactNode }> = [];
 
-  allPanels.push({
-    key: "discovery",
-    node: <DiscoveryEvidencePanel discovery={discovery} evidence={evidence} currentStep={currentStep} investigating={investigationRunning} expanded={!hasOtherPanels} onSelectEvidence={(d) => setDetail({ type: "evidence", data: d })} />,
-  });
-
-  if (tlData && (tlData.data?.length ?? 0) > 0) allPanels.push({ key: "timeline", node: <TimelineSection analysis={analysis} onSelect={(d) => setDetail({ type: "timeline", data: d })} /> });
-  if (ucData && (ucData.data?.length ?? 0) > 0) allPanels.push({ key: "usecases", node: <UseCasesSection analysis={analysis} onSelect={(d) => setDetail({ type: "usecase", data: d })} /> });
-  if (gapData && (gapData.data?.length ?? 0) > 0) allPanels.push({ key: "gaps", node: <GapsSection analysis={analysis} onSelect={(d) => setDetail({ type: "gap", data: d })} /> });
-  if (validations.length > 0) allPanels.push({ key: "validations", node: <RuleValidationSection validations={validations} onSelect={(d) => setDetail({ type: "validation", data: d })} /> });
+  if (tlData && (tlData.data?.length ?? 0) > 0) primaryPanels.push({ key: "timeline", node: <TimelineSection analysis={analysis} onSelect={(d) => setDetail({ type: "timeline", data: d })} /> });
+  if ((ucData && (ucData.data?.length ?? 0) > 0) || validations.length > 0) {
+    primaryPanels.push({
+      key: "rules",
+      node: <DetectionRulesSection analysis={analysis} validations={validations} onSelect={(type, d) => setDetail({ type, data: d })} />,
+    });
+  }
   if (recommendations.length > 0) {
     const latestRec = recommendations[recommendations.length - 1];
     if ((latestRec?.data?.length ?? 0) > 0 || latestRec?.executive_summary) {
-      allPanels.push({ key: "recs", node: <RecommendSection recommendations={recommendations} onSelect={(d) => setDetail({ type: "recommendation", data: d })} /> });
+      primaryPanels.push({ key: "recs", node: <RecommendSection recommendations={recommendations} onSelect={(d) => setDetail({ type: "recommendation", data: d })} /> });
     }
   }
 
-  const cols = allPanels.length <= 1 ? 1 : 2;
-  const rows = Math.ceil(allPanels.length / cols);
+  secondaryPanels.push({
+    key: "discovery",
+    node: <DiscoveryEvidencePanel discovery={discovery} evidence={evidence} currentStep={currentStep} investigating={investigationRunning} expanded={!hasResultPanels} onSelectEvidence={(d) => setDetail({ type: "evidence", data: d })} />,
+  });
+  if (gapData && (gapData.data?.length ?? 0) > 0) secondaryPanels.push({ key: "gaps", node: <GapsSection analysis={analysis} onSelect={(d) => setDetail({ type: "gap", data: d })} /> });
+
+  const resultPanels = primaryPanels.length > 0 ? primaryPanels : secondaryPanels;
+  const resultCols = resultPanels.length <= 1 ? 1 : Math.min(3, resultPanels.length);
+  const secondaryCols = Math.min(2, secondaryPanels.length);
 
   return (
     <>
@@ -114,26 +120,63 @@ export default function CenterPanel() {
       <Box
         sx={{
           height: "100%",
-          overflow: "hidden",
-          display: "grid",
-          gridTemplateColumns: `repeat(${cols}, 1fr)`,
-          gridTemplateRows: `repeat(${rows}, 1fr)`,
+          overflow: { xs: "auto", md: "hidden" },
+          display: "flex",
+          flexDirection: "column",
           gap: 0.75,
         }}
       >
-        <AnimatePresence>
-          {allPanels.map(({ key, node }) => (
-            <motion.div
-              key={key}
-              initial={{ opacity: 0, scale: 0.95, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              style={{ minHeight: 0, overflow: "hidden" }}
-            >
-              {node}
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", md: `repeat(${resultCols}, minmax(0, 1fr))` },
+            gridAutoRows: { xs: "minmax(260px, 1fr)", md: "minmax(0, 1fr)" },
+            gap: 0.75,
+          }}
+        >
+          <AnimatePresence>
+            {resultPanels.map(({ key, node }) => (
+              <motion.div
+                key={key}
+                initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                style={{ minHeight: 0, overflow: "hidden" }}
+              >
+                {node}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </Box>
+
+        {primaryPanels.length > 0 && secondaryPanels.length > 0 && (
+          <Box
+            sx={{
+              height: { xs: "auto", md: 150 },
+              minHeight: { xs: 150, md: 150 },
+              flexShrink: 0,
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: `repeat(${secondaryCols}, minmax(0, 1fr))` },
+              gridAutoRows: { xs: 150, md: "minmax(0, 1fr)" },
+              gap: 0.75,
+              opacity: 0.92,
+            }}
+          >
+            {secondaryPanels.map(({ key, node }) => (
+              <motion.div
+                key={key}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                style={{ minHeight: 0, overflow: "hidden" }}
+              >
+                {node}
+              </motion.div>
+            ))}
+          </Box>
+        )}
       </Box>
 
       <DetailDrawer
@@ -657,32 +700,85 @@ function GapsSection({ analysis, onSelect }: { analysis: DataHook["analysis"]; o
   );
 }
 
-/* ---------- Use Cases ---------- */
+/* ---------- Detection Rules ---------- */
 
-function UseCasesSection({ analysis, onSelect }: { analysis: DataHook["analysis"]; onSelect: (d: Record<string, unknown>) => void }) {
+type DetectionRuleRow = {
+  key: string;
+  generated?: Record<string, string>;
+  validation?: DataHook["analysis"][number];
+};
+
+function DetectionRulesSection({ analysis, validations, onSelect }: {
+  analysis: DataHook["analysis"];
+  validations: DataHook["analysis"];
+  onSelect: (type: "usecase" | "validation", d: Record<string, unknown>) => void;
+}) {
   const ucEvt = analysis.find((a) => a.type === "use_cases");
   const useCases = (ucEvt?.data ?? []) as Array<Record<string, string>>;
+  const testedRules = validations.filter((v) => v.type === "rule_validation");
+  const usedValidationIndexes = new Set<number>();
+
+  const rows: DetectionRuleRow[] = useCases.map((uc, i) => {
+    const matchIndex = testedRules.findIndex((rule, validationIndex) => {
+      if (usedValidationIndexes.has(validationIndex)) return false;
+      const sameName = normalizeRuleName(rule.rule_name) === normalizeRuleName(uc.name);
+      const sameSpl = rule.spl && uc.spl_query && rule.spl.trim() === uc.spl_query.trim();
+      return sameName || sameSpl;
+    });
+    if (matchIndex >= 0) usedValidationIndexes.add(matchIndex);
+    return {
+      key: `generated-${i}-${uc.name ?? "rule"}`,
+      generated: uc,
+      validation: matchIndex >= 0 ? testedRules[matchIndex] : undefined,
+    };
+  });
+
+  testedRules.forEach((rule, i) => {
+    if (!usedValidationIndexes.has(i)) {
+      rows.push({ key: `validated-${i}-${rule.rule_name ?? "rule"}`, validation: rule });
+    }
+  });
 
   return (
-    <GlassCard title="Generated Detection Rules" subtitle={`${useCases.length} rules`} accent="green">
-      {useCases.map((uc, i) => {
-        const prio = uc.priority ?? "P3";
-        const sc = SEVERITY_COLOR[prio] ?? "green";
+    <GlassCard title="Detection Rules" subtitle={`${useCases.length} generated · ${testedRules.length} tested`} accent="green">
+      {rows.map((row, i) => {
+        const generated = row.generated;
+        const validation = row.validation;
+        const priority = generated?.priority ?? "P3";
+        const sc = SEVERITY_COLOR[priority] ?? "green";
+        const name = generated?.name ?? validation?.rule_name ?? "Unnamed Rule";
+        const technique = generated?.mitre_technique ?? "";
+        const spl = validation?.spl ?? generated?.spl_query;
+        const matchCount = validation?.match_count;
+        const fired = (matchCount ?? 0) > 0;
+        const detailType = validation ? "validation" : "usecase";
+        const detailData = (validation ?? generated ?? {}) as Record<string, unknown>;
+
         return (
-          <motion.div key={i} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
-            <Box sx={{ py: 0.5, borderBottom: "1px solid rgba(255,255,255,0.06)", ...clickableRow }} onClick={() => onSelect(uc)}>
-              <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                <Typography variant="caption" sx={{ px: 0.5, borderRadius: 0.5, background: `${COLORS[sc]}22`, color: COLORS[sc], fontWeight: 700, fontSize: 12 }}>{prio}</Typography>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: "grey.200", fontSize: 13 }}>{uc.name}</Typography>
-                <Typography variant="caption" sx={{ color: COLORS.red, fontSize: 12 }}>{uc.mitre_technique}</Typography>
+          <motion.div key={row.key} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
+            <Box sx={{ py: 0.55, borderBottom: "1px solid rgba(255,255,255,0.06)", ...clickableRow }} onClick={() => onSelect(detailType, detailData)}>
+              <Box sx={{ display: "flex", gap: 0.75, alignItems: "center", justifyContent: "space-between" }}>
+                <Box sx={{ display: "flex", gap: 0.75, alignItems: "center", minWidth: 0 }}>
+                  <Typography variant="caption" sx={{ px: 0.5, borderRadius: 0.5, background: `${COLORS[sc]}22`, color: COLORS[sc], fontWeight: 700, fontSize: 12, flexShrink: 0 }}>{priority}</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: "grey.200", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</Typography>
+                  {technique && <Typography variant="caption" sx={{ color: COLORS.red, fontSize: 12, flexShrink: 0 }}>{technique}</Typography>}
+                </Box>
+                <Typography variant="caption" sx={{
+                  px: 0.5, py: 0.15, borderRadius: 0.5,
+                  background: validation ? fired ? `${COLORS.green}22` : `${COLORS.amber}22` : "rgba(255,255,255,0.06)",
+                  color: validation ? fired ? COLORS.green : COLORS.amber : "grey.500",
+                  fontSize: 11, fontWeight: 700, flexShrink: 0,
+                }}>
+                  {validation ? fired ? `${matchCount} MATCHES` : "0 MATCHES" : "PENDING"}
+                </Typography>
               </Box>
-              {uc.spl_query && (
+              {spl && (
                 <Typography variant="caption" sx={{ color: COLORS.cyan, fontSize: 11, fontFamily: "'JetBrains Mono'", display: "block", mt: 0.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {uc.spl_query}
+                  {spl}
                 </Typography>
               )}
-              {uc.alert_condition && (
-                <Typography variant="caption" sx={{ color: COLORS.amber, fontSize: 12, mt: 0.2, display: "block" }}>Alert: {uc.alert_condition}</Typography>
+              {generated?.alert_condition && (
+                <Typography variant="caption" sx={{ color: COLORS.amber, fontSize: 12, mt: 0.2, display: "block" }}>Alert: {generated.alert_condition}</Typography>
               )}
             </Box>
           </motion.div>
@@ -692,42 +788,8 @@ function UseCasesSection({ analysis, onSelect }: { analysis: DataHook["analysis"
   );
 }
 
-/* ---------- Rule Validations ---------- */
-
-function RuleValidationSection({ validations, onSelect }: { validations: DataHook["analysis"]; onSelect: (d: Record<string, unknown>) => void }) {
-  const rules = validations.filter((v) => v.type === "rule_validation");
-
-  return (
-    <GlassCard title="Validated Detection Rules" subtitle={`${rules.length} tested`} accent="green">
-      {rules.map((rule, i) => {
-        const fired = (rule.match_count ?? 0) > 0;
-        return (
-          <motion.div key={i} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
-            <Box sx={{ py: 0.5, borderBottom: "1px solid rgba(255,255,255,0.06)", ...clickableRow }} onClick={() => onSelect(rule as unknown as Record<string, unknown>)}>
-              <Box sx={{ display: "flex", gap: 1, alignItems: "center", justifyContent: "space-between" }}>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: "grey.200", fontSize: 13 }}>
-                  {rule.rule_name}
-                </Typography>
-                <Typography variant="caption" sx={{
-                  px: 0.5, py: 0.15, borderRadius: 0.5,
-                  background: fired ? `${COLORS.green}22` : `${COLORS.amber}22`,
-                  color: fired ? COLORS.green : COLORS.amber,
-                  fontSize: 11, fontWeight: 700,
-                }}>
-                  {fired ? `${rule.match_count} MATCHES` : "0 MATCHES"}
-                </Typography>
-              </Box>
-              {rule.spl && (
-                <Typography variant="caption" sx={{ color: COLORS.cyan, fontSize: 11, fontFamily: "'JetBrains Mono'", display: "block", mt: 0.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {rule.spl}
-                </Typography>
-              )}
-            </Box>
-          </motion.div>
-        );
-      })}
-    </GlassCard>
-  );
+function normalizeRuleName(name?: string) {
+  return (name ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
 /* ---------- Rule Match Alert Overlay ---------- */

@@ -7,7 +7,7 @@ import { COLORS } from "../theme";
 import MetricCard from "./shared/MetricCard";
 import PhaseProgress from "./PhaseProgress";
 
-export default function Header() {
+export default function Header({ showTrace = false, onOpenTrace }: { showTrace?: boolean; onOpenTrace?: () => void }) {
   const { discovery, evidence, analysis, status, statusEvents, watchEvents, investigationRunning } = useData();
   const [resetting, setResetting] = useState(false);
 
@@ -40,6 +40,7 @@ export default function Header() {
         gridArea: "header",
         display: "flex",
         alignItems: "center",
+        flexWrap: "wrap",
         gap: 3,
         px: 2,
         py: 1,
@@ -63,7 +64,7 @@ export default function Header() {
 
       <PhaseProgress />
 
-      <Box sx={{ ml: "auto", display: "flex", gap: 2 }}>
+      <Box sx={{ ml: "auto", display: { xs: "none", md: "flex" }, gap: 2 }}>
         <MetricCard label="Indexes" value={indexCount} accent="cyan" />
         <MetricCard label="Hosts" value={hostCount} accent="green" />
         <MetricCard label="Events" value={evtCount} accent="amber" />
@@ -87,6 +88,28 @@ export default function Header() {
           </motion.div>
         ) : null;
       })()}
+
+      {showTrace && (
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={onOpenTrace}
+          sx={{
+            borderColor: `${COLORS.purple}55`,
+            color: COLORS.purple,
+            fontFamily: "'Orbitron'",
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: 1,
+            minWidth: 128,
+            px: 1,
+            py: 0.25,
+            "&:hover": { background: `${COLORS.purple}12`, borderColor: COLORS.purple },
+          }}
+        >
+          AGENT TRACE / MCP PROOF
+        </Button>
+      )}
 
       {hasDashboardState && (!investigationRunning || sampleReplay) && (
         <Button

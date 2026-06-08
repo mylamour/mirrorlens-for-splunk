@@ -4,9 +4,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import GlassCard from "./shared/GlassCard";
 import DetailDrawer, { DetailField } from "./shared/DetailDrawer";
 import { useData } from "../data/context";
-import { triggerInvestigation, loadDemoData } from "../data/api";
+import { triggerInvestigation, loadDemoData, fetchDashboardConfig } from "../data/api";
 import { COLORS } from "../theme";
 import type { AccentColor } from "../theme";
+import type { DashboardConfig } from "../data/types";
 
 const SEVERITY_COLOR: Record<string, AccentColor> = {
   CRITICAL: "red", HIGH: "red", MEDIUM: "amber", LOW: "green",
@@ -291,13 +292,42 @@ function ConnectionSetup() {
   const [showToken, setShowToken] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [loadingDemo, setLoadingDemo] = useState(false);
+  const [config, setConfig] = useState<DashboardConfig | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
+  const [useOverride, setUseOverride] = useState(false);
 
-  const canSubmit = url.trim().length > 0 && token.trim().length > 0 && !connecting && !loadingDemo;
+  useEffect(() => {
+    let cancelled = false;
+    fetchDashboardConfig()
+      .then((next) => {
+        if (!cancelled) setConfig(next);
+      })
+      .catch(() => {
+        if (!cancelled) setConfig(null);
+      })
+      .finally(() => {
+        if (!cancelled) setConfigLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const configured = config?.configured === true;
+  const showManualFields = !configLoading && (!configured || useOverride);
+  const manualReady = url.trim().length > 0 && token.trim().length > 0;
+  const canSubmit = !configLoading && (showManualFields ? manualReady : configured) && !connecting && !loadingDemo;
 
   const handleConnect = async () => {
     if (!canSubmit) return;
     setConnecting(true);
-    await triggerInvestigation({ splunk_url: url.trim(), splunk_token: token.trim() });
+    try {
+      if (showManualFields) {
+        await triggerInvestigation({ splunk_url: url.trim(), splunk_token: token.trim() });
+      } else {
+        await triggerInvestigation();
+      }
+    } catch {
+      setConnecting(false);
+    }
   };
 
   const handleDemo = async () => {
@@ -315,23 +345,44 @@ function ConnectionSetup() {
       <GlassCard title="Connect to Splunk" accent="cyan">
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, py: 3, px: 2 }}>
           <Typography variant="body1" sx={{ color: "grey.400", textAlign: "center", mb: 1, fontSize: 16 }}>
-            Enter your Splunk MCP Server connection details.<br />
+            {configured && !useOverride ? "Using configured Splunk MCP Server." : "Enter your Splunk MCP Server connection details."}<br />
             MirrorLens AI will autonomously investigate your security posture.
           </Typography>
 
-          <TextField label="Splunk MCP URL" placeholder="https://your-splunk:8089/services/mcp" value={url} onChange={(e) => setUrl(e.target.value)} fullWidth size="small" sx={neonInput} />
+          {configLoading && (
+            <Typography variant="caption" sx={{ color: "grey.500", textAlign: "center", fontSize: 12 }}>
+              Checking configured Splunk connection...
+            </Typography>
+          )}
 
-          <TextField
-            label="Bearer Token" placeholder="Splunk authentication token" type={showToken ? "text" : "password"}
-            value={token} onChange={(e) => setToken(e.target.value)} fullWidth size="small" sx={neonInput}
-            slotProps={{ input: { endAdornment: (
-              <InputAdornment position="end">
-                <IconButton size="small" onClick={() => setShowToken(!showToken)} sx={{ color: "grey.500", fontSize: 14 }}>
-                  {showToken ? "◉" : "◎"}
-                </IconButton>
-              </InputAdornment>
-            )}}}
-          />
+          {configured && !useOverride && (
+            <Box sx={{ border: `1px solid ${COLORS.green}55`, background: `${COLORS.green}08`, px: 2, py: 1.5 }}>
+              <Typography sx={{ fontFamily: "'Orbitron'", fontWeight: 700, letterSpacing: 1, color: COLORS.green, fontSize: 12 }}>
+                SPLUNK MCP CONFIGURED
+              </Typography>
+              <Typography sx={{ color: "grey.500", fontSize: 12, mt: 0.5 }}>
+                URL and token are loaded from environment variables.
+              </Typography>
+            </Box>
+          )}
+
+          {showManualFields && (
+            <>
+              <TextField label="Splunk MCP URL" placeholder="https://your-splunk:8089/services/mcp" value={url} onChange={(e) => setUrl(e.target.value)} fullWidth size="small" sx={neonInput} />
+
+              <TextField
+                label="Bearer Token" placeholder="Splunk authentication token" type={showToken ? "text" : "password"}
+                value={token} onChange={(e) => setToken(e.target.value)} fullWidth size="small" sx={neonInput}
+                slotProps={{ input: { endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setShowToken(!showToken)} sx={{ color: "grey.500", fontSize: 14 }}>
+                      {showToken ? "◉" : "◎"}
+                    </IconButton>
+                  </InputAdornment>
+                )}}}
+              />
+            </>
+          )}
 
           <Button
             variant="outlined" size="large" disabled={!canSubmit} onClick={handleConnect}
@@ -342,8 +393,18 @@ function ConnectionSetup() {
               "&.Mui-disabled": { borderColor: "grey.800", color: "grey.600" },
             }}
           >
-            {connecting ? "Connecting..." : "Connect & Investigate"}
+            {connecting ? "Connecting..." : configured && !useOverride ? "Start Investigation" : "Connect & Investigate"}
           </Button>
+
+          {configured && (
+            <Button
+              variant="text" size="small" disabled={connecting || loadingDemo}
+              onClick={() => setUseOverride((value) => !value)}
+              sx={{ color: "grey.500", fontSize: 12, fontFamily: "'Rajdhani'", textTransform: "none", mt: -1 }}
+            >
+              {useOverride ? "Use configured Splunk connection" : "Use different connection"}
+            </Button>
+          )}
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
             <Box sx={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.08)" }} />

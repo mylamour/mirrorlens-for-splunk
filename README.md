@@ -172,7 +172,10 @@ cd dashboard/frontend
 pnpm dev
 ```
 
-Open `http://localhost:5174` → Enter Splunk MCP URL and token → Click "Connect & Investigate"
+Open `http://localhost:5174`. If `.env` contains `SPLUNK_MCP_URL` and
+`SPLUNK_MCP_TOKEN`, click "Start Investigation". To test a different Splunk
+instance, expand "Use different connection", enter the MCP URL and token, then
+click "Connect & Investigate".
 
 ---
 

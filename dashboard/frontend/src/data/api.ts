@@ -10,6 +10,7 @@ import type {
   StatusEvent,
   StreamEvent,
   WatchEvent,
+  DashboardConfig,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
@@ -128,6 +129,12 @@ function applyEvent(prev: DashboardData, evt: StreamEvent): DashboardData {
 export async function loadDemoData(): Promise<{ summary?: Record<string, number> }> {
   const res = await fetch(`${API_BASE}/api/demo/load`, { method: "POST" });
   if (!res.ok) throw new Error(`Demo load failed: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchDashboardConfig(): Promise<DashboardConfig> {
+  const res = await fetch(`${API_BASE}/api/config`, { signal: AbortSignal.timeout(3000) });
+  if (!res.ok) throw new Error(`Config check failed: ${res.status}`);
   return res.json();
 }
 

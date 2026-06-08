@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from mirrorlens_dashboard.routes import (
+    config_router,
     investigate_router,
     snapshot_router,
     stream_router,
@@ -35,6 +36,7 @@ def build_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.include_router(config_router, prefix="/api")
     app.include_router(snapshot_router, prefix="/api")
     app.include_router(stream_router, prefix="/api")
     app.include_router(investigate_router, prefix="/api")

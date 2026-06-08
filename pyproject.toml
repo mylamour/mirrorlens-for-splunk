@@ -32,6 +32,7 @@ packages = ["src/mirrorlens"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+testpaths = ["tests"]
 markers = [
     "integration: requires live Splunk MCP Server (deselect with '-m not integration')",
 ]

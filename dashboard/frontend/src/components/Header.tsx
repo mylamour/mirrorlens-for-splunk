@@ -5,7 +5,6 @@ import { useData } from "../data/context";
 import { resetDemoData } from "../data/api";
 import { COLORS } from "../theme";
 import MetricCard from "./shared/MetricCard";
-import PhaseProgress from "./PhaseProgress";
 
 export default function Header({ showTrace = false, onOpenTrace }: { showTrace?: boolean; onOpenTrace?: () => void }) {
   const { discovery, evidence, analysis, status, statusEvents, watchEvents, investigationRunning } = useData();
@@ -63,8 +62,6 @@ export default function Header({ showTrace = false, onOpenTrace }: { showTrace?:
       >
         MIRRORLENS
       </Typography>
-
-      <PhaseProgress />
 
       <Box sx={{ ml: "auto", display: { xs: "none", md: "flex" }, gap: 2 }}>
         <MetricCard label="Indexes" value={indexCount} accent="cyan" />

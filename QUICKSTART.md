@@ -63,9 +63,9 @@ Open **http://localhost:5174**
 
 ## Running Your First Investigation
 
-1. The dashboard opens to a connection form.
-2. Enter your **Splunk MCP URL** (e.g. `https://splunk.example.com:8089/services/mcp`) and **Bearer Token**.
-3. Click **Connect & Investigate**.
+1. The dashboard opens to the connection screen.
+2. If `.env` contains `SPLUNK_MCP_URL` and `SPLUNK_MCP_TOKEN`, click **Start Investigation**.
+3. To test a different Splunk instance, click **Use different connection**, enter your **Splunk MCP URL** and **Bearer Token**, then click **Connect & Investigate**.
 4. Watch the AI autonomously:
    - Discover all indexes, hosts, and sourcetypes
    - Run targeted SPL queries
@@ -84,10 +84,12 @@ The dashboard ships with a real desensitized investigation result. To view it wi
 1. Start the dashboard (Docker or dev mode — see above)
 2. On the connection screen, click **⚡ Load Sample Investigation**
 3. The full investigation result loads instantly — 12-step MITRE ATT&CK timeline, 8 detection gaps, 5 validated rules all with live matches
+4. Click **RESET VIEW** in the header to clear the sample and return to the connection screen.
 
 Or via API directly:
 ```bash
 curl -X POST http://localhost:8091/api/demo/load
+curl -X POST http://localhost:8091/api/demo/reset
 ```
 
 ---
@@ -98,9 +100,9 @@ If you want to use the included synthetic attack data:
 
 ```bash
 # Requires SPLUNK_HEC_URL and SPLUNK_HEC_TOKEN in .env
-uv run mirrorlens ingest
+uv run mirrorlens ingest examples/incident_events.jsonl
 
-# Or run the full demo (ingest + investigate via CLI)
+# Then run the CLI investigation
 uv run mirrorlens demo
 ```
 
@@ -190,9 +192,9 @@ pnpm dev
 
 ### 第一次调查
 
-1. 仪表盘显示连接表单。
-2. 输入 **Splunk MCP URL** 和 **Bearer Token**。
-3. 点击 **Connect & Investigate**。
+1. 仪表盘显示连接页面。
+2. 如果 `.env` 已配置 `SPLUNK_MCP_URL` 和 `SPLUNK_MCP_TOKEN`，点击 **Start Investigation**。
+3. 如果要临时连接另一个 Splunk，点击 **Use different connection**，输入 **Splunk MCP URL** 和 **Bearer Token**，再点击 **Connect & Investigate**。
 4. 观察 AI 自主完成：发现索引→执行 SPL→构建攻击时间线→识别检测盲区→验证检测规则→**规则命中实时数据时触发全屏警报**。
 5. 调查结束后，Watch 模式自动启动（每 5 分钟轮询）。
 
@@ -200,8 +202,8 @@ pnpm dev
 
 ```bash
 # 需要在 .env 中配置 SPLUNK_HEC_URL 和 SPLUNK_HEC_TOKEN
-uv run mirrorlens ingest
+uv run mirrorlens ingest examples/incident_events.jsonl
 
-# 完整演示（导入 + CLI 调查）
+# 然后运行 CLI 调查
 uv run mirrorlens demo
 ```

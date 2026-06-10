@@ -132,3 +132,10 @@ export interface DashboardData {
   statusEvents: StatusEvent[];
   watchEvents: WatchEvent[];
 }
+
+export interface DashboardConfig {
+  configured: boolean;
+  splunk_url_configured: boolean;
+  splunk_token_configured: boolean;
+  splunk_url_preview: string | null;
+}

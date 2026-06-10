@@ -4,7 +4,7 @@
 
 > [中文文档](README.zh.md)
 
-MirrorLens is an autonomous AI security investigator that connects to Splunk via the official [Splunk MCP Server](https://dev.splunk.com/). It uses a Claude-powered ReAct loop to discover data, run SPL queries, build MITRE ATT&CK timelines, identify detection gaps, validate detection rules against live data, and enter continuous watch mode — all streamed to a real-time cyberpunk dashboard.
+MirrorLens is an autonomous AI security investigator that connects to Splunk via the official [Splunk MCP Server](https://dev.splunk.com/). It uses a Claude-powered ReAct loop to discover data, run SPL queries, summarize MITRE ATT&CK attack findings, identify detection gaps, validate detection rules against live data, and enter continuous watch mode — all streamed to a real-time cyberpunk dashboard.
 
 ---
 
@@ -35,13 +35,13 @@ MirrorLens is an autonomous AI security investigator that connects to Splunk via
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │  Real-Time Dashboard (React 19 + MUI + Framer Motion)               │
-│  ┌──────────┐ ┌───────────────────┐ ┌─────────────────┐             │
-│  │  Header   │ │   Center Panels   │ │  AI Activity    │             │
-│  │  Phase    │ │   Discovery       │ │  AI Reasoning   │             │
-│  │  Progress │ │   Timeline        │ │  Splunk MCP     │             │
-│  │  Watch    │ │   Rules + Gaps    │ │  Calls          │             │
-│  │  Status   │ │   Playbook        │ │                 │             │
-│  └──────────┘ └───────────────────┘ └─────────────────┘             │
+│  ┌──────────┐ ┌───────────────────────────────────────┐             │
+│  │  Header  │ │ Result-first Dashboard                 │             │
+│  │  Phase   │ │ Attack Findings · Detection Rules      │             │
+│  │  Watch   │ │ Response Playbook                       │             │
+│  │  Trace   │ │ Discovery/Evidence as secondary context │             │
+│  │  Status  │ │ Agent Trace / MCP Proof drawer          │             │
+│  └──────────┘ └───────────────────────────────────────┘             │
 │        ↑ WebSocket /api/stream                                       │
 ├─────────────────────────────────────────────────────────────────────┤
 │  Dashboard Backend (FastAPI + EventBus)                              │
@@ -155,9 +155,9 @@ docker compose up --build
 #### CLI Mode
 
 ```bash
-uv run mirrorlens demo          # ingest demo data + run investigation
-uv run mirrorlens ingest        # send demo data to Splunk
-uv run mirrorlens investigate   # run AI investigation
+uv run mirrorlens ingest examples/incident_events.jsonl  # send demo data to Splunk
+uv run mirrorlens demo                                  # run AI investigation
+uv run mirrorlens investigate                           # run AI investigation
 ```
 
 #### Dashboard Dev Mode
@@ -172,7 +172,10 @@ cd dashboard/frontend
 pnpm dev
 ```
 
-Open `http://localhost:5174` → Enter Splunk MCP URL and token → Click "Connect & Investigate"
+Open `http://localhost:5174`. If `.env` contains `SPLUNK_MCP_URL` and
+`SPLUNK_MCP_TOKEN`, click "Start Investigation". To test a different Splunk
+instance, expand "Use different connection", enter the MCP URL and token, then
+click "Connect & Investigate".
 
 ---
 
@@ -181,14 +184,12 @@ Open `http://localhost:5174` → Enter Splunk MCP URL and token → Click "Conne
 | Panel | Description |
 |-------|-------------|
 | **Header** | Phase progress (ReAct LOOP badge + iteration counter), WATCHING indicator, metric cards, LIVE status |
-| **Discovery & Evidence** | Splunk server info, indexes with event counts, field discovery, hosts, sourcetypes, evidence queries |
-| **Attack Timeline** | MITRE ATT&CK technique timeline with tactic mapping |
-| **Generated Detection Rules** | AI-generated SPL detection rules with priority and MITRE mapping |
-| **Detection Gaps** | Severity-rated gaps where attack steps lack detection coverage |
-| **Validated Detection Rules** | Rules tested against live Splunk data with match count |
+| **Attack Findings** | MITRE ATT&CK-mapped suspicious behaviors with technique IDs, tactics, and supporting context |
+| **Detection Rules** | AI-generated SPL rules merged with live validation status and match count |
 | **Response Playbook** | Executive summary + numbered remediation actions with risk levels |
-| **AI Reasoning** (sidebar) | Real-time ReAct reasoning stages |
-| **Splunk MCP** (sidebar) | Live MCP tool calls with SPL, status, row counts |
+| **Discovery & Evidence** | Collapsed supporting context with Splunk server info, indexes, fields, hosts, sourcetypes, and evidence queries |
+| **Detection Gaps** | Collapsed supporting context for attack steps that lack detection coverage |
+| **Agent Trace / MCP Proof** | Drawer with real-time ReAct reasoning stages and Splunk MCP tool calls, SPL, status, and row counts |
 
 ### Rule Match Alert
 
@@ -214,6 +215,7 @@ After the ReAct investigation completes:
 | `GET` | `/api/status` | Returns `running`, `phase`, `elapsed_seconds`, `watch_running` |
 | `POST` | `/api/watch/stop` | Stop continuous watch mode |
 | `GET` | `/api/snapshot` | Full replay state for all 9 EventBus channels |
+| `POST` | `/api/demo/reset` | Clear sample replay/dashboard state |
 | `WS` | `/api/stream` | Real-time WebSocket event stream |
 
 ---
@@ -297,8 +299,8 @@ All data is fully synthetic — no real hosts, IPs, or customer data.
 MirrorLens uses Claude AI via Anthropic's native `tool_use` API in a ReAct loop:
 
 1. **Autonomous Investigation** — Claude decides which tools to call, what SPL to run, and when to move to the next phase. No hardcoded workflow.
-2. **Evidence Analysis** — Builds MITRE ATT&CK timeline from raw Splunk events with technique IDs, tactics, confidence scores.
-3. **Detection Gap Analysis** — Compares attack timeline against existing Splunk saved searches and alerts to find blind spots.
+2. **Evidence Analysis** — Summarizes MITRE ATT&CK-mapped findings from raw Splunk events with technique IDs, tactics, and confidence scores.
+3. **Detection Gap Analysis** — Compares attack findings against existing Splunk saved searches and alerts to find blind spots.
 4. **Rule Generation + Live Validation** — Generates SPL detection rules and tests them against live data to verify they fire.
 5. **Response Recommendations** — Categorized (containment/eradication/recovery) actions with risk levels.
 
@@ -309,9 +311,8 @@ All AI analysis is **read-only and advisory** — no automated responses are exe
 ## Tests
 
 ```bash
-uv run pytest tests/ -v                          # all unit tests
-uv run pytest tests/ -v -m "not integration"     # skip live Splunk tests
-uv run pytest tests/ -v -m integration           # live integration only
+uv run python -m pytest -q                    # unit tests; skips live Splunk integration by default
+uv run python -m pytest -q -m integration     # live Splunk integration only
 ```
 
 ---

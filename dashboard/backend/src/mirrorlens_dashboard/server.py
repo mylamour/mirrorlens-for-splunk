@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from mirrorlens_dashboard.routes import (
+    config_router,
     investigate_router,
     snapshot_router,
     stream_router,
@@ -35,12 +36,15 @@ def build_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.include_router(config_router, prefix="/api")
     app.include_router(snapshot_router, prefix="/api")
     app.include_router(stream_router, prefix="/api")
     app.include_router(investigate_router, prefix="/api")
 
     if FRONTEND_DIST.is_dir():
-        app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
+        assets_dir = FRONTEND_DIST / "assets"
+        if assets_dir.is_dir():
+            app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
         @app.get("/{full_path:path}")
         async def serve_spa(full_path: str) -> FileResponse:

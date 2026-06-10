@@ -4,7 +4,7 @@
 
 > [English Documentation](README.md)
 
-MirrorLens 是一个 AI 自主安全调查系统，通过官方 [Splunk MCP Server](https://dev.splunk.com/) 连接 Splunk。它使用 Claude 驱动的 ReAct 循环发现数据、执行 SPL 查询、构建 MITRE ATT&CK 攻击时间线、识别检测盲区、对检测规则进行实时验证，并进入持续监控模式 —— 全部通过实时赛博朋克风格仪表盘呈现。
+MirrorLens 是一个 AI 自主安全调查系统，通过官方 [Splunk MCP Server](https://dev.splunk.com/) 连接 Splunk。它使用 Claude 驱动的 ReAct 循环发现数据、执行 SPL 查询、总结 MITRE ATT&CK 攻击发现、识别检测盲区、对检测规则进行实时验证，并进入持续监控模式 —— 全部通过实时赛博朋克风格仪表盘呈现。
 
 ---
 
@@ -35,13 +35,13 @@ MirrorLens 是一个 AI 自主安全调查系统，通过官方 [Splunk MCP Serv
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │  实时仪表盘（React 19 + MUI + Framer Motion）                        │
-│  ┌──────────┐ ┌───────────────────┐ ┌─────────────────┐             │
-│  │  顶部栏   │ │   中央面板        │ │  AI 活动侧边栏  │             │
-│  │  阶段进度 │ │   发现            │ │  AI 推理        │             │
-│  │  监控状态 │ │   时间线          │ │  Splunk MCP     │             │
-│  │          │ │   规则 + 盲区     │ │  调用记录       │             │
-│  │          │ │   响应手册        │ │                 │             │
-│  └──────────┘ └───────────────────┘ └─────────────────┘             │
+│  ┌──────────┐ ┌───────────────────────────────────────┐             │
+│  │  顶部栏  │ │ 结果优先仪表盘                         │             │
+│  │  阶段进度│ │ 攻击发现 · 检测规则 · 响应手册          │             │
+│  │  监控状态│ │ Discovery/Evidence 作为辅助上下文       │             │
+│  │  Trace   │ │ Agent Trace / MCP Proof 抽屉            │             │
+│  │  实时状态│ │                                       │             │
+│  └──────────┘ └───────────────────────────────────────┘             │
 │        ↑ WebSocket /api/stream                                       │
 ├─────────────────────────────────────────────────────────────────────┤
 │  仪表盘后端（FastAPI + EventBus）                                     │
@@ -138,9 +138,9 @@ docker compose up --build
 #### 命令行模式
 
 ```bash
-uv run mirrorlens demo          # 导入演示数据 + 运行调查
-uv run mirrorlens ingest        # 向 Splunk 导入演示数据
-uv run mirrorlens investigate   # 运行 AI 调查
+uv run mirrorlens ingest examples/incident_events.jsonl  # 向 Splunk 导入演示数据
+uv run mirrorlens demo                                  # 运行 AI 调查
+uv run mirrorlens investigate                           # 运行 AI 调查
 ```
 
 #### 仪表盘开发模式
@@ -164,14 +164,12 @@ pnpm dev
 | 面板 | 描述 |
 |------|------|
 | **顶部栏** | 阶段进度（ReAct LOOP 徽章 + 迭代计数器）、WATCHING 指示器、指标卡、实时状态 |
-| **Discovery & Evidence** | Splunk 服务器信息、索引及事件数、字段发现、主机、源类型、证据查询 |
-| **Attack Timeline** | MITRE ATT&CK 技术时间线与战术映射 |
-| **Generated Detection Rules** | AI 生成的 SPL 检测规则，含优先级和 MITRE 映射 |
-| **Detection Gaps** | 按严重程度评级的检测盲区（攻击步骤缺乏检测覆盖） |
-| **Validated Detection Rules** | 在 Splunk 实时数据上验证的规则及匹配数 |
+| **Attack Findings** | 映射到 MITRE ATT&CK 的可疑行为发现，包含技术 ID、战术和辅助上下文 |
+| **Detection Rules** | AI 生成的 SPL 检测规则与实时验证状态、匹配数合并展示 |
 | **Response Playbook** | 执行摘要 + 编号的修复操作及风险等级 |
-| **AI Reasoning**（侧边栏） | 实时 ReAct 推理阶段 |
-| **Splunk MCP**（侧边栏） | 实时 MCP 工具调用，含 SPL、状态、行数 |
+| **Discovery & Evidence** | 默认折叠的辅助上下文：Splunk 服务器信息、索引、字段、主机、源类型、证据查询 |
+| **Detection Gaps** | 默认折叠的辅助上下文：攻击步骤缺乏检测覆盖的位置 |
+| **Agent Trace / MCP Proof** | 抽屉视图：实时 ReAct 推理阶段、Splunk MCP 工具调用、SPL、状态、行数 |
 
 ### 规则匹配警报
 
@@ -235,8 +233,8 @@ ReAct 调查完成后：
 MirrorLens 通过 Anthropic 原生 `tool_use` API 在 ReAct 循环中使用 Claude AI：
 
 1. **自主调查** — Claude 自主决定调用哪些工具、执行什么 SPL、何时进入下一阶段。无硬编码流程，AI 根据发现自适应调整。
-2. **证据分析** — 从原始 Splunk 事件构建 MITRE ATT&CK 时间线，含技术 ID、战术、置信度。
-3. **检测盲区分析** — 将攻击时间线与现有 Splunk 保存的搜索和告警比对，发现检测盲区。
+2. **证据分析** — 从原始 Splunk 事件总结映射到 MITRE ATT&CK 的攻击发现，含技术 ID、战术、置信度。
+3. **检测盲区分析** — 将攻击发现与现有 Splunk 保存的搜索和告警比对，发现检测盲区。
 4. **规则生成 + 实时验证** — 生成 SPL 检测规则并在 Splunk 实时数据上验证其是否会触发。
 5. **响应建议** — 生成分类的（遏制/根除/恢复）响应操作及风险等级。
 

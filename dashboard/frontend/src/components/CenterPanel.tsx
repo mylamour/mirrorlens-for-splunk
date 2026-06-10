@@ -4,9 +4,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import GlassCard from "./shared/GlassCard";
 import DetailDrawer, { DetailField } from "./shared/DetailDrawer";
 import { useData } from "../data/context";
-import { triggerInvestigation, loadDemoData } from "../data/api";
+import { triggerInvestigation, loadDemoData, fetchDashboardConfig } from "../data/api";
 import { COLORS } from "../theme";
 import type { AccentColor } from "../theme";
+import type { DashboardConfig } from "../data/types";
 
 const SEVERITY_COLOR: Record<string, AccentColor> = {
   CRITICAL: "red", HIGH: "red", MEDIUM: "amber", LOW: "green",
@@ -21,6 +22,7 @@ type DetailItem = {
 export default function CenterPanel() {
   const { phases, discovery, evidence, analysis, recommendations, investigationRunning, statusEvents } = useData();
   const [detail, setDetail] = useState<DetailItem | null>(null);
+  const [showSupportingContext, setShowSupportingContext] = useState(false);
 
   const latestPhase = new Map<string, string>();
   for (const p of phases) latestPhase.set(p.name, p.status);
@@ -79,33 +81,41 @@ export default function CenterPanel() {
   const ucData = analysis.find((a) => a.type === "use_cases");
   const validations = analysis.filter((a) => a.type === "rule_validation");
 
-  const hasOtherPanels =
+  const hasResultPanels =
     (tlData && (tlData.data?.length ?? 0) > 0) ||
     (gapData && (gapData.data?.length ?? 0) > 0) ||
     (ucData && (ucData.data?.length ?? 0) > 0) ||
     validations.length > 0 ||
     recommendations.some((r) => (r.data?.length ?? 0) > 0 || r.executive_summary);
 
-  const allPanels: Array<{ key: string; node: React.ReactNode }> = [];
+  const primaryPanels: Array<{ key: string; node: React.ReactNode }> = [];
+  const secondaryPanels: Array<{ key: string; node: React.ReactNode }> = [];
 
-  allPanels.push({
-    key: "discovery",
-    node: <DiscoveryEvidencePanel discovery={discovery} evidence={evidence} currentStep={currentStep} investigating={investigationRunning} expanded={!hasOtherPanels} onSelectEvidence={(d) => setDetail({ type: "evidence", data: d })} />,
-  });
-
-  if (tlData && (tlData.data?.length ?? 0) > 0) allPanels.push({ key: "timeline", node: <TimelineSection analysis={analysis} onSelect={(d) => setDetail({ type: "timeline", data: d })} /> });
-  if (ucData && (ucData.data?.length ?? 0) > 0) allPanels.push({ key: "usecases", node: <UseCasesSection analysis={analysis} onSelect={(d) => setDetail({ type: "usecase", data: d })} /> });
-  if (gapData && (gapData.data?.length ?? 0) > 0) allPanels.push({ key: "gaps", node: <GapsSection analysis={analysis} onSelect={(d) => setDetail({ type: "gap", data: d })} /> });
-  if (validations.length > 0) allPanels.push({ key: "validations", node: <RuleValidationSection validations={validations} onSelect={(d) => setDetail({ type: "validation", data: d })} /> });
+  if (tlData && (tlData.data?.length ?? 0) > 0) primaryPanels.push({ key: "timeline", node: <TimelineSection analysis={analysis} onSelect={(d) => setDetail({ type: "timeline", data: d })} /> });
+  if ((ucData && (ucData.data?.length ?? 0) > 0) || validations.length > 0) {
+    primaryPanels.push({
+      key: "rules",
+      node: <DetectionRulesSection analysis={analysis} validations={validations} onSelect={(type, d) => setDetail({ type, data: d })} />,
+    });
+  }
   if (recommendations.length > 0) {
     const latestRec = recommendations[recommendations.length - 1];
     if ((latestRec?.data?.length ?? 0) > 0 || latestRec?.executive_summary) {
-      allPanels.push({ key: "recs", node: <RecommendSection recommendations={recommendations} onSelect={(d) => setDetail({ type: "recommendation", data: d })} /> });
+      primaryPanels.push({ key: "recs", node: <RecommendSection recommendations={recommendations} onSelect={(d) => setDetail({ type: "recommendation", data: d })} /> });
     }
   }
 
-  const cols = allPanels.length <= 1 ? 1 : 2;
-  const rows = Math.ceil(allPanels.length / cols);
+  secondaryPanels.push({
+    key: "discovery",
+    node: <DiscoveryEvidencePanel discovery={discovery} evidence={evidence} currentStep={currentStep} investigating={investigationRunning} expanded={!hasResultPanels} onSelectEvidence={(d) => setDetail({ type: "evidence", data: d })} />,
+  });
+  if (gapData && (gapData.data?.length ?? 0) > 0) secondaryPanels.push({ key: "gaps", node: <GapsSection analysis={analysis} onSelect={(d) => setDetail({ type: "gap", data: d })} /> });
+
+  const resultPanels = primaryPanels.length > 0 ? primaryPanels : secondaryPanels;
+  const resultCols = resultPanels.length <= 1 ? 1 : Math.min(3, resultPanels.length);
+  const secondaryCols = Math.min(2, secondaryPanels.length);
+  const gapCount = (gapData?.data?.length ?? 0);
+  const supportingSummary = `${discovery.length} discovery · ${evidence.length} evidence${gapCount > 0 ? ` · ${gapCount} gaps` : ""}`;
 
   return (
     <>
@@ -113,26 +123,100 @@ export default function CenterPanel() {
       <Box
         sx={{
           height: "100%",
-          overflow: "hidden",
-          display: "grid",
-          gridTemplateColumns: `repeat(${cols}, 1fr)`,
-          gridTemplateRows: `repeat(${rows}, 1fr)`,
+          overflow: { xs: "auto", md: "hidden" },
+          display: "flex",
+          flexDirection: "column",
           gap: 0.75,
         }}
       >
-        <AnimatePresence>
-          {allPanels.map(({ key, node }) => (
-            <motion.div
-              key={key}
-              initial={{ opacity: 0, scale: 0.95, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              style={{ minHeight: 0, overflow: "hidden" }}
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", md: `repeat(${resultCols}, minmax(0, 1fr))` },
+            gridAutoRows: { xs: "minmax(260px, 1fr)", md: "minmax(0, 1fr)" },
+            gap: 0.75,
+          }}
+        >
+          <AnimatePresence>
+            {resultPanels.map(({ key, node }) => (
+              <motion.div
+                key={key}
+                initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                style={{ minHeight: 0, overflow: "hidden" }}
+              >
+                {node}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </Box>
+
+        {primaryPanels.length > 0 && secondaryPanels.length > 0 && (
+          <Box
+            sx={{
+              flexShrink: 0,
+              minHeight: 34,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 1.25,
+              borderTop: "1px solid rgba(255,255,255,0.06)",
+              pt: 0.25,
+            }}
+          >
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setShowSupportingContext((value) => !value)}
+              sx={{
+                borderColor: `${COLORS.cyan}55`,
+                color: COLORS.cyan,
+                fontFamily: "'Orbitron'",
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: 1,
+                minWidth: 180,
+                py: 0.25,
+                "&:hover": { background: `${COLORS.cyan}12`, borderColor: COLORS.cyan },
+              }}
             >
-              {node}
-            </motion.div>
-          ))}
-        </AnimatePresence>
+              {showSupportingContext ? "HIDE EVIDENCE & GAPS" : "SHOW EVIDENCE & GAPS"}
+            </Button>
+            <Typography variant="caption" sx={{ color: "grey.600", fontSize: 11, fontFamily: "'JetBrains Mono'" }}>
+              {supportingSummary}
+            </Typography>
+          </Box>
+        )}
+
+        {primaryPanels.length > 0 && secondaryPanels.length > 0 && showSupportingContext && (
+          <Box
+            sx={{
+              height: { xs: "auto", md: 150 },
+              minHeight: { xs: 150, md: 150 },
+              flexShrink: 0,
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: `repeat(${secondaryCols}, minmax(0, 1fr))` },
+              gridAutoRows: { xs: 150, md: "minmax(0, 1fr)" },
+              gap: 0.75,
+              opacity: 0.92,
+            }}
+          >
+            {secondaryPanels.map(({ key, node }) => (
+              <motion.div
+                key={key}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                style={{ minHeight: 0, overflow: "hidden" }}
+              >
+                {node}
+              </motion.div>
+            ))}
+          </Box>
+        )}
       </Box>
 
       <DetailDrawer
@@ -148,7 +232,7 @@ export default function CenterPanel() {
 }
 
 const DETAIL_TITLES: Record<DetailItem["type"], string> = {
-  timeline: "Attack Step Detail",
+  timeline: "Attack Finding Detail",
   gap: "Detection Gap Detail",
   usecase: "Detection Rule Detail",
   validation: "Rule Validation Detail",
@@ -272,6 +356,13 @@ const clickableRow = {
   "&:hover": { background: "rgba(255,255,255,0.04)" },
 };
 
+const SUMMARY_LINE_CLAMP = {
+  display: "-webkit-box",
+  WebkitLineClamp: 4,
+  WebkitBoxOrient: "vertical",
+  overflow: "hidden",
+};
+
 /* ---------- Connection Setup ---------- */
 
 const neonInput = {
@@ -291,21 +382,53 @@ function ConnectionSetup() {
   const [showToken, setShowToken] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [loadingDemo, setLoadingDemo] = useState(false);
+  const [config, setConfig] = useState<DashboardConfig | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
+  const [useOverride, setUseOverride] = useState(false);
 
-  const canSubmit = url.trim().length > 0 && token.trim().length > 0 && !connecting && !loadingDemo;
+  useEffect(() => {
+    let cancelled = false;
+    fetchDashboardConfig()
+      .then((next) => {
+        if (!cancelled) setConfig(next);
+      })
+      .catch(() => {
+        if (!cancelled) setConfig(null);
+      })
+      .finally(() => {
+        if (!cancelled) setConfigLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const configured = config?.configured === true;
+  const showManualFields = !configLoading && (!configured || useOverride);
+  const manualReady = url.trim().length > 0 && token.trim().length > 0;
+  const canSubmit = !configLoading && (showManualFields ? manualReady : configured) && !connecting && !loadingDemo;
 
   const handleConnect = async () => {
     if (!canSubmit) return;
     setConnecting(true);
-    await triggerInvestigation({ splunk_url: url.trim(), splunk_token: token.trim() });
+    try {
+      window.localStorage.removeItem("mirrorlens_sample_replay");
+      if (showManualFields) {
+        await triggerInvestigation({ splunk_url: url.trim(), splunk_token: token.trim() });
+      } else {
+        await triggerInvestigation();
+      }
+    } catch {
+      setConnecting(false);
+    }
   };
 
   const handleDemo = async () => {
     if (loadingDemo || connecting) return;
     setLoadingDemo(true);
     try {
+      window.localStorage.setItem("mirrorlens_sample_replay", "1");
       await loadDemoData();
     } catch {
+      window.localStorage.removeItem("mirrorlens_sample_replay");
       setLoadingDemo(false);
     }
   };
@@ -315,23 +438,44 @@ function ConnectionSetup() {
       <GlassCard title="Connect to Splunk" accent="cyan">
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, py: 3, px: 2 }}>
           <Typography variant="body1" sx={{ color: "grey.400", textAlign: "center", mb: 1, fontSize: 16 }}>
-            Enter your Splunk MCP Server connection details.<br />
+            {configured && !useOverride ? "Using configured Splunk MCP Server." : "Enter your Splunk MCP Server connection details."}<br />
             MirrorLens AI will autonomously investigate your security posture.
           </Typography>
 
-          <TextField label="Splunk MCP URL" placeholder="https://your-splunk:8089/services/mcp" value={url} onChange={(e) => setUrl(e.target.value)} fullWidth size="small" sx={neonInput} />
+          {configLoading && (
+            <Typography variant="caption" sx={{ color: "grey.500", textAlign: "center", fontSize: 12 }}>
+              Checking configured Splunk connection...
+            </Typography>
+          )}
 
-          <TextField
-            label="Bearer Token" placeholder="Splunk authentication token" type={showToken ? "text" : "password"}
-            value={token} onChange={(e) => setToken(e.target.value)} fullWidth size="small" sx={neonInput}
-            slotProps={{ input: { endAdornment: (
-              <InputAdornment position="end">
-                <IconButton size="small" onClick={() => setShowToken(!showToken)} sx={{ color: "grey.500", fontSize: 14 }}>
-                  {showToken ? "◉" : "◎"}
-                </IconButton>
-              </InputAdornment>
-            )}}}
-          />
+          {configured && !useOverride && (
+            <Box sx={{ border: `1px solid ${COLORS.green}55`, background: `${COLORS.green}08`, px: 2, py: 1.5 }}>
+              <Typography sx={{ fontFamily: "'Orbitron'", fontWeight: 700, letterSpacing: 1, color: COLORS.green, fontSize: 12 }}>
+                SPLUNK MCP CONFIGURED
+              </Typography>
+              <Typography sx={{ color: "grey.500", fontSize: 12, mt: 0.5 }}>
+                URL and token are loaded from environment variables.
+              </Typography>
+            </Box>
+          )}
+
+          {showManualFields && (
+            <>
+              <TextField label="Splunk MCP URL" placeholder="https://your-splunk:8089/services/mcp" value={url} onChange={(e) => setUrl(e.target.value)} fullWidth size="small" sx={neonInput} />
+
+              <TextField
+                label="Bearer Token" placeholder="Splunk authentication token" type={showToken ? "text" : "password"}
+                value={token} onChange={(e) => setToken(e.target.value)} fullWidth size="small" sx={neonInput}
+                slotProps={{ input: { endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setShowToken(!showToken)} sx={{ color: "grey.500", fontSize: 14 }}>
+                      {showToken ? "◉" : "◎"}
+                    </IconButton>
+                  </InputAdornment>
+                )}}}
+              />
+            </>
+          )}
 
           <Button
             variant="outlined" size="large" disabled={!canSubmit} onClick={handleConnect}
@@ -342,8 +486,18 @@ function ConnectionSetup() {
               "&.Mui-disabled": { borderColor: "grey.800", color: "grey.600" },
             }}
           >
-            {connecting ? "Connecting..." : "Connect & Investigate"}
+            {connecting ? "Connecting..." : configured && !useOverride ? "Start Investigation" : "Connect & Investigate"}
           </Button>
+
+          {configured && (
+            <Button
+              variant="text" size="small" disabled={connecting || loadingDemo}
+              onClick={() => setUseOverride((value) => !value)}
+              sx={{ color: "grey.500", fontSize: 12, fontFamily: "'Rajdhani'", textTransform: "none", mt: -1 }}
+            >
+              {useOverride ? "Use configured Splunk connection" : "Use different connection"}
+            </Button>
+          )}
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
             <Box sx={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.08)" }} />
@@ -549,8 +703,8 @@ function TimelineSection({ analysis, onSelect }: { analysis: DataHook["analysis"
   const summary = tl?.summary ?? "";
 
   return (
-    <GlassCard title="Attack Timeline" subtitle={`${entries.length} steps`} accent="red">
-      {summary && <Typography variant="body2" sx={{ mb: 0.75, color: "grey.300", lineHeight: 1.5, fontSize: 14 }}>{summary}</Typography>}
+    <GlassCard title="Attack Findings" subtitle={`${entries.length} findings`} accent="red">
+      {summary && <Typography variant="body2" sx={{ mb: 0.75, color: "grey.300", lineHeight: 1.5, fontSize: 14, ...SUMMARY_LINE_CLAMP }}>{summary}</Typography>}
       <AnimatePresence>
         {entries.map((step, i) => (
           <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}>
@@ -593,33 +747,89 @@ function GapsSection({ analysis, onSelect }: { analysis: DataHook["analysis"]; o
   );
 }
 
-/* ---------- Use Cases ---------- */
+/* ---------- Detection Rules ---------- */
 
-function UseCasesSection({ analysis, onSelect }: { analysis: DataHook["analysis"]; onSelect: (d: Record<string, unknown>) => void }) {
+type DetectionRuleRow = {
+  key: string;
+  generated?: Record<string, string>;
+  validation?: DataHook["analysis"][number];
+};
+
+function DetectionRulesSection({ analysis, validations, onSelect }: {
+  analysis: DataHook["analysis"];
+  validations: DataHook["analysis"];
+  onSelect: (type: "usecase" | "validation", d: Record<string, unknown>) => void;
+}) {
   const ucEvt = analysis.find((a) => a.type === "use_cases");
   const useCases = (ucEvt?.data ?? []) as Array<Record<string, string>>;
+  const testedRules = dedupeRuleValidations(validations.filter((v) => v.type === "rule_validation"));
+  const usedValidationIndexes = new Set<number>();
+  const unmatchedGeneratedRows: DetectionRuleRow[] = [];
+
+  const rows: DetectionRuleRow[] = [];
+  useCases.forEach((uc, i) => {
+    const matchIndex = testedRules.findIndex((rule, validationIndex) => {
+      if (usedValidationIndexes.has(validationIndex)) return false;
+      const sameName = normalizeRuleName(rule.rule_name) === normalizeRuleName(uc.name);
+      const sameSpl = rule.spl && uc.spl_query && rule.spl.trim() === uc.spl_query.trim();
+      return sameName || sameSpl;
+    });
+    const row = {
+      key: `generated-${i}-${uc.name ?? "rule"}`,
+      generated: uc,
+      validation: matchIndex >= 0 ? testedRules[matchIndex] : undefined,
+    };
+    if (matchIndex >= 0) {
+      usedValidationIndexes.add(matchIndex);
+      rows.push(row);
+    } else {
+      unmatchedGeneratedRows.push(row);
+    }
+  });
+
+  testedRules.forEach((rule, i) => {
+    if (!usedValidationIndexes.has(i)) {
+      rows.push({ key: `validated-${i}-${rule.rule_name ?? "rule"}`, validation: rule });
+    }
+  });
+
+  const pendingSlots = Math.max(0, useCases.length - testedRules.length);
+  rows.push(...unmatchedGeneratedRows.slice(0, pendingSlots));
+
+  const sortedRows = sortDetectionRuleRows(rows);
 
   return (
-    <GlassCard title="Generated Detection Rules" subtitle={`${useCases.length} rules`} accent="green">
-      {useCases.map((uc, i) => {
-        const prio = uc.priority ?? "P3";
-        const sc = SEVERITY_COLOR[prio] ?? "green";
+    <GlassCard title="Detection Rules" subtitle={`${useCases.length} generated · ${testedRules.length} tested`} accent="green">
+      {sortedRows.map((row, i) => {
+        const generated = row.generated;
+        const validation = row.validation;
+        const priority = generated?.priority ?? "P3";
+        const sc = SEVERITY_COLOR[priority] ?? "green";
+        const name = generated?.name ?? validation?.rule_name ?? "Unnamed Rule";
+        const technique = generated?.mitre_technique ?? "";
+        const matchCount = validation?.match_count;
+        const fired = (matchCount ?? 0) > 0;
+        const detailType = validation ? "validation" : "usecase";
+        const detailData = (validation ?? generated ?? {}) as Record<string, unknown>;
+
         return (
-          <motion.div key={i} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
-            <Box sx={{ py: 0.5, borderBottom: "1px solid rgba(255,255,255,0.06)", ...clickableRow }} onClick={() => onSelect(uc)}>
-              <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                <Typography variant="caption" sx={{ px: 0.5, borderRadius: 0.5, background: `${COLORS[sc]}22`, color: COLORS[sc], fontWeight: 700, fontSize: 12 }}>{prio}</Typography>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: "grey.200", fontSize: 13 }}>{uc.name}</Typography>
-                <Typography variant="caption" sx={{ color: COLORS.red, fontSize: 12 }}>{uc.mitre_technique}</Typography>
-              </Box>
-              {uc.spl_query && (
-                <Typography variant="caption" sx={{ color: COLORS.cyan, fontSize: 11, fontFamily: "'JetBrains Mono'", display: "block", mt: 0.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {uc.spl_query}
+          <motion.div key={row.key} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
+            <Box sx={{ py: 0.55, borderBottom: "1px solid rgba(255,255,255,0.06)", ...clickableRow }} onClick={() => onSelect(detailType, detailData)}>
+              <Box sx={{ display: "flex", gap: 0.75, alignItems: "center", justifyContent: "space-between" }}>
+                <Box sx={{ display: "flex", gap: 0.75, alignItems: "center", minWidth: 0 }}>
+                  <Typography variant="caption" sx={{ px: 0.5, borderRadius: 0.5, background: `${COLORS[sc]}22`, color: COLORS[sc], fontWeight: 700, fontSize: 12, flexShrink: 0 }}>{priority}</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: "grey.200", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</Typography>
+                  {technique && <Typography variant="caption" sx={{ color: COLORS.red, fontSize: 12, flexShrink: 0 }}>{technique}</Typography>}
+                </Box>
+                <Typography variant="caption" sx={{
+                  px: 0.5, py: 0.15, borderRadius: 0.5,
+                  background: validation ? fired ? `${COLORS.green}22` : `${COLORS.amber}22` : "rgba(255,255,255,0.06)",
+                  color: validation ? fired ? COLORS.green : COLORS.amber : "grey.500",
+                  fontSize: 11, fontWeight: 700, flexShrink: 0,
+                }}>
+                  {validation ? fired ? `${matchCount} MATCHES` : "0 MATCHES" : "PENDING"}
                 </Typography>
-              )}
-              {uc.alert_condition && (
-                <Typography variant="caption" sx={{ color: COLORS.amber, fontSize: 12, mt: 0.2, display: "block" }}>Alert: {uc.alert_condition}</Typography>
-              )}
+              </Box>
             </Box>
           </motion.div>
         );
@@ -628,42 +838,39 @@ function UseCasesSection({ analysis, onSelect }: { analysis: DataHook["analysis"
   );
 }
 
-/* ---------- Rule Validations ---------- */
+function normalizeRuleName(name?: string) {
+  return (name ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
 
-function RuleValidationSection({ validations, onSelect }: { validations: DataHook["analysis"]; onSelect: (d: Record<string, unknown>) => void }) {
-  const rules = validations.filter((v) => v.type === "rule_validation");
+function dedupeRuleValidations(rules: DataHook["analysis"]) {
+  const byKey = new Map<string, DataHook["analysis"][number]>();
+  for (const rule of rules) {
+    const key = normalizeRuleName(rule.rule_name) || (rule.spl ?? "").trim();
+    if (!key) continue;
+    const existing = byKey.get(key);
+    if (!existing || (rule.match_count ?? 0) > (existing.match_count ?? 0)) {
+      byKey.set(key, rule);
+    }
+  }
+  return [...byKey.values()];
+}
 
-  return (
-    <GlassCard title="Validated Detection Rules" subtitle={`${rules.length} tested`} accent="green">
-      {rules.map((rule, i) => {
-        const fired = (rule.match_count ?? 0) > 0;
-        return (
-          <motion.div key={i} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
-            <Box sx={{ py: 0.5, borderBottom: "1px solid rgba(255,255,255,0.06)", ...clickableRow }} onClick={() => onSelect(rule as unknown as Record<string, unknown>)}>
-              <Box sx={{ display: "flex", gap: 1, alignItems: "center", justifyContent: "space-between" }}>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: "grey.200", fontSize: 13 }}>
-                  {rule.rule_name}
-                </Typography>
-                <Typography variant="caption" sx={{
-                  px: 0.5, py: 0.15, borderRadius: 0.5,
-                  background: fired ? `${COLORS.green}22` : `${COLORS.amber}22`,
-                  color: fired ? COLORS.green : COLORS.amber,
-                  fontSize: 11, fontWeight: 700,
-                }}>
-                  {fired ? `${rule.match_count} MATCHES` : "0 MATCHES"}
-                </Typography>
-              </Box>
-              {rule.spl && (
-                <Typography variant="caption" sx={{ color: COLORS.cyan, fontSize: 11, fontFamily: "'JetBrains Mono'", display: "block", mt: 0.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {rule.spl}
-                </Typography>
-              )}
-            </Box>
-          </motion.div>
-        );
-      })}
-    </GlassCard>
-  );
+function sortDetectionRuleRows(rows: DetectionRuleRow[]) {
+  const priorityRank: Record<string, number> = { P1: 1, CRITICAL: 1, HIGH: 1, P2: 2, MEDIUM: 2, P3: 3, LOW: 3 };
+  return [...rows].sort((a, b) => {
+    const aMatches = a.validation?.match_count ?? 0;
+    const bMatches = b.validation?.match_count ?? 0;
+    if ((bMatches > 0) !== (aMatches > 0)) return bMatches > 0 ? 1 : -1;
+    if (bMatches !== aMatches) return bMatches - aMatches;
+
+    const aPriority = priorityRank[a.generated?.priority ?? "P3"] ?? 9;
+    const bPriority = priorityRank[b.generated?.priority ?? "P3"] ?? 9;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+
+    const aName = a.generated?.name ?? a.validation?.rule_name ?? "";
+    const bName = b.generated?.name ?? b.validation?.rule_name ?? "";
+    return aName.localeCompare(bName);
+  });
 }
 
 /* ---------- Rule Match Alert Overlay ---------- */
@@ -823,16 +1030,17 @@ function RecommendSection({ recommendations, onSelect }: { recommendations: Data
   const latest = recommendations[recommendations.length - 1];
   const recs = (latest?.data ?? []) as Array<Record<string, string>>;
   const summary = latest?.executive_summary ?? "";
+  const visibleRecommendations = recs.slice(0, 3);
 
   return (
     <GlassCard title="Response Playbook" subtitle={summary ? "Complete" : `${recs.length} actions`} accent="amber">
       {summary && (
         <Box sx={{ mb: 1, pb: 0.75, borderBottom: `1px solid ${COLORS.green}33` }}>
           <Typography variant="caption" sx={{ color: COLORS.green, fontWeight: 700, fontFamily: "'Orbitron'", fontSize: 12, mb: 0.25, display: "block" }}>EXECUTIVE SUMMARY</Typography>
-          <Typography variant="body2" sx={{ color: "grey.200", lineHeight: 1.6, fontSize: 14 }}>{summary}</Typography>
+          <Typography variant="body2" sx={{ color: "grey.200", lineHeight: 1.6, fontSize: 14, ...SUMMARY_LINE_CLAMP }}>{summary}</Typography>
         </Box>
       )}
-      {recs.map((rec, i) => (
+      {visibleRecommendations.map((rec, i) => (
         <motion.div key={i} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }}>
           <Box sx={{ py: 0.5, borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", gap: 1, ...clickableRow }} onClick={() => onSelect(rec)}>
             <Typography variant="caption" sx={{ fontFamily: "'Orbitron'", color: COLORS.cyan, fontWeight: 700, minWidth: 20, fontSize: 13 }}>{i + 1}</Typography>
@@ -852,6 +1060,11 @@ function RecommendSection({ recommendations, onSelect }: { recommendations: Data
           </Box>
         </motion.div>
       ))}
+      {recs.length > visibleRecommendations.length && (
+        <Typography variant="caption" sx={{ color: "grey.500", fontFamily: "'Orbitron'", fontSize: 11, letterSpacing: 1, display: "block", mt: 0.75 }}>
+          +{recs.length - visibleRecommendations.length} MORE ACTIONS
+        </Typography>
+      )}
     </GlassCard>
   );
 }

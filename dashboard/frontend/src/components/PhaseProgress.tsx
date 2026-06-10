@@ -48,19 +48,6 @@ export default function PhaseProgress() {
             Iteration {iteration}
           </Typography>
         )}
-        {!isDone && (
-          <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
-            {["REASON", "ACT", "OBSERVE"].map((step) => (
-              <Typography key={step} variant="caption" sx={{
-                px: 0.75, py: 0.15, borderRadius: 0.5,
-                border: `1px solid ${COLORS.cyan}33`,
-                color: COLORS.cyan, fontSize: 9, fontFamily: "'Orbitron'", letterSpacing: 0.5,
-              }}>
-                {step}
-              </Typography>
-            ))}
-          </Box>
-        )}
         {isDone && isWatching && (
           <motion.div
             animate={changesDetected ? { scale: [1, 1.1, 1] } : isChecking ? { opacity: [0.5, 1, 0.5] } : { opacity: [0.6, 1, 0.6] }}

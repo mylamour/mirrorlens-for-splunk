@@ -73,6 +73,10 @@ class EventBus:
         async with self._lock:
             self._subscribers.discard(q)
 
+    async def clear(self) -> None:
+        async with self._lock:
+            self._replay.clear()
+
     def replay(
         self, channel: str | None = None, limit: int = 50
     ) -> list[Event]:

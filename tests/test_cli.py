@@ -36,4 +36,5 @@ def test_investigate_help():
 def test_demo_help():
     result = CliRunner().invoke(main, ["demo", "--help"])
     assert result.exit_code == 0
-    assert "--skip-ingest" in result.output
+    assert "AI investigation" in result.output
+    assert "--skip-ingest" not in result.output

@@ -52,13 +52,54 @@ class FindingRequest(BaseModel):
     finding: dict[str, Any]
 
 
+def _related_context(finding: dict[str, Any]) -> dict[str, Any]:
+    """Pull detection rules and response actions from EventBus that relate to this finding."""
+    analysis      = [e.payload for e in bus.replay("analysis",      limit=200)]
+    recommendation = [e.payload for e in bus.replay("recommendation", limit=200)]
+
+    tech_id = str(finding.get("technique_id", "")).upper()
+    tactic  = str(finding.get("tactic", "")).lower()
+
+    # Detection rules: match by MITRE technique or tactic
+    uc_ev   = next((e for e in reversed(analysis) if e.get("type") == "use_cases"), {})
+    all_ucs = uc_ev.get("data", [])
+    matched_rules: list[dict[str, Any]] = [
+        uc for uc in all_ucs
+        if (tech_id and str(uc.get("mitre_technique", "")).upper() == tech_id)
+        or (tactic  and str(uc.get("mitre_tactic",    "")).lower()  == tactic)
+    ][:3]
+
+    # Response actions: score by keyword overlap with technique_id, tactic, description
+    rec_ev  = next((e for e in reversed(recommendation) if e.get("data")), {})
+    all_recs = rec_ev.get("data", [])
+    keywords = {
+        w.lower() for w in (
+            tech_id.split() + tactic.split()
+            + str(finding.get("technique_name", "")).lower().split()
+            + str(finding.get("description", "")).lower().split()
+        )
+        if len(w) > 4
+    }
+
+    def _score(rec: dict[str, Any]) -> int:
+        text = str(rec.get("action", "")).lower()
+        return sum(1 for kw in keywords if kw in text)
+
+    sorted_recs = sorted(all_recs, key=_score, reverse=True)
+    matched_recs: list[dict[str, Any]] = sorted_recs[:2]
+
+    return {"rules": matched_rules, "actions": matched_recs}
+
+
 @router.post("/report/finding")
 async def download_finding_pdf(req: FindingRequest) -> StreamingResponse:
     if not req.finding:
         return JSONResponse(status_code=400, content={"error": "missing finding data"})
 
+    related = _related_context(req.finding)
+
     try:
-        pdf_bytes = generate_finding_pdf(req.finding)
+        pdf_bytes = generate_finding_pdf(req.finding, related=related)
     except Exception as exc:
         log.exception("Finding PDF generation failed")
         return JSONResponse(status_code=500, content={"error": f"PDF generation failed: {exc}"})

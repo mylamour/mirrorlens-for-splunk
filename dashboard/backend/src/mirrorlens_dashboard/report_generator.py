@@ -575,18 +575,30 @@ def _render_appendix(pdf: ReportPDF, mcp_calls: list) -> None:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def generate_finding_pdf(finding: dict[str, Any]) -> bytes:
-    """Generate a 1-page PDF card for a single timeline finding."""
+def _finding_section_label(pdf: ReportPDF, label: str) -> None:
+    """Thin labelled divider used inside the finding card."""
+    pdf.ln(4)
+    pdf._hbold(8)
+    pdf.set_text_color(*_SUBTEXT)
+    pdf.cell(0, 4, label, new_x="LMARGIN", new_y="NEXT")
+    pdf.set_draw_color(*_RULE)
+    pdf.set_line_width(0.15)
+    pdf.line(18, pdf.get_y(), pdf.w - 18, pdf.get_y())
+    pdf.ln(3)
+
+
+def generate_finding_pdf(finding: dict[str, Any], related: dict[str, Any] | None = None) -> bytes:
+    """Generate a finding card PDF enriched with detection rules and response actions."""
     pdf = ReportPDF()
     pdf.setup()
-    pdf.set_auto_page_break(False)
+    pdf.set_auto_page_break(True, margin=18)
     pdf.add_page()
 
-    # Top accent line
+    # Top accent bar
     pdf.set_fill_color(*_ACCENT)
     pdf.rect(0, 0, pdf.w, 3, "F")
 
-    # Header bar
+    # Branding header
     pdf.set_y(10)
     pdf._hbold(9)
     pdf.set_text_color(*_ACCENT)
@@ -599,54 +611,77 @@ def generate_finding_pdf(finding: dict[str, Any]) -> bytes:
     pdf.set_draw_color(*_RULE)
     pdf.set_line_width(0.2)
     pdf.line(18, pdf.get_y(), pdf.w - 18, pdf.get_y())
-    pdf.ln(6)
+    pdf.ln(5)
 
-    # Heading line: [CONFIDENCE]  technique_id -- technique_name
+    # ── Finding identity ──────────────────────────────────────────────────────
     confidence = str(finding.get("confidence", "")).upper()
-    tech_id    = finding.get("technique_id", "")
-    tech_name  = finding.get("technique_name", "")
-    title      = f"{tech_id}  {('--  ' + tech_name) if tech_name else ''}".strip()
+    tech_id    = str(finding.get("technique_id", ""))
+    tech_name  = str(finding.get("technique_name", ""))
+    title      = f"{tech_id}  {'--  ' + tech_name if tech_name else ''}".strip()
     pdf.heading_line(confidence or "INFO", title)
 
-    # Metadata row
-    pairs = []
-    if finding.get("timestamp"):
-        pairs.append(("Timestamp", str(finding["timestamp"])[:19]))
+    pairs: list[tuple[str, str]] = []
     if finding.get("tactic"):
         pairs.append(("Tactic", str(finding["tactic"])))
+    if finding.get("timestamp"):
+        pairs.append(("Timestamp", str(finding["timestamp"])[:19]))
     if finding.get("host"):
         pairs.append(("Host", str(finding["host"])))
     if pairs:
         pdf.kv_line(pairs)
-    pdf.ln(4)
 
-    # Description
-    desc = finding.get("description", "")
+    # ── Description ───────────────────────────────────────────────────────────
+    desc = str(finding.get("description", ""))
     if desc:
-        pdf._hbold(8)
-        pdf.set_text_color(*_SUBTEXT)
-        pdf.cell(0, 4, "DESCRIPTION", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_draw_color(*_RULE)
-        pdf.set_line_width(0.15)
-        pdf.line(18, pdf.get_y(), pdf.w - 18, pdf.get_y())
-        pdf.ln(3)
+        _finding_section_label(pdf, "DESCRIPTION")
         pdf.body_text(desc, size=9)
-        pdf.ln(3)
 
-    # Evidence
-    evidence = finding.get("evidence", "")
+    # ── Evidence ──────────────────────────────────────────────────────────────
+    evidence = str(finding.get("evidence", ""))
     if evidence:
-        pdf._hbold(8)
-        pdf.set_text_color(*_SUBTEXT)
-        pdf.cell(0, 4, "EVIDENCE", new_x="LMARGIN", new_y="NEXT")
-        pdf.set_draw_color(*_RULE)
-        pdf.set_line_width(0.15)
-        pdf.line(18, pdf.get_y(), pdf.w - 18, pdf.get_y())
-        pdf.ln(3)
+        _finding_section_label(pdf, "EVIDENCE")
         pdf.body_text(evidence, size=8.5)
 
-    # Footer
-    pdf.set_y(pdf.h - 12)
+    # ── Detection Coverage ────────────────────────────────────────────────────
+    rules: list[dict[str, Any]] = (related or {}).get("rules", [])
+    _finding_section_label(pdf, "DETECTION COVERAGE")
+    if rules:
+        for rule in rules:
+            rule_name = str(rule.get("name", ""))
+            rule_desc = str(rule.get("description", ""))
+            spl       = str(rule.get("spl_query", "")).strip()
+            mitre     = str(rule.get("mitre_technique", ""))
+
+            pdf.ensure_space(25)
+            badge = mitre if mitre else "RULE"
+            pdf.heading_line(badge, rule_name)
+            if rule_desc:
+                pdf.body_text(rule_desc[:280] + ("…" if len(rule_desc) > 280 else ""), size=8.5)
+            if spl:
+                pdf.code_box(spl[:500] + ("…" if len(spl) > 500 else ""))
+            pdf.ln(2)
+    else:
+        pdf.body_text("No detection rule found for this technique in the current investigation.", size=8.5)
+
+    # ── Response Actions ──────────────────────────────────────────────────────
+    actions: list[dict[str, Any]] = (related or {}).get("actions", [])
+    _finding_section_label(pdf, "RESPONSE ACTIONS")
+    if actions:
+        for act in actions:
+            raw    = str(act.get("action", ""))
+            # First word(s) before " — " is the category badge
+            parts  = raw.split(" \u2014 ", 1)
+            badge  = parts[0].strip().split()[0] if parts else "ACTION"
+            body   = parts[1].strip() if len(parts) > 1 else raw
+            pdf.ensure_space(18)
+            pdf.heading_line(badge, "")
+            pdf.body_text(body[:350] + ("…" if len(body) > 350 else ""), size=8.5)
+            pdf.ln(2)
+    else:
+        pdf.body_text("No response actions available for this finding.", size=8.5)
+
+    # ── Page footer ───────────────────────────────────────────────────────────
+    pdf.ln(6)
     pdf.set_draw_color(*_RULE)
     pdf.set_line_width(0.2)
     pdf.line(18, pdf.get_y(), pdf.w - 18, pdf.get_y())

@@ -24,7 +24,7 @@ export default function CenterPanel() {
   const [detail, setDetail] = useState<DetailItem | null>(null);
   const [showSupportingContext, setShowSupportingContext] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
-  const mountedRef = useRef(false);
+  const wasRunningRef = useRef(false);
 
   const latestPhase = new Map<string, string>();
   for (const p of phases) latestPhase.set(p.name, p.status);
@@ -35,13 +35,17 @@ export default function CenterPanel() {
   const errorEvent = statusEvents.find((s) => s.event === "error");
   const isIdle = !investigationRunning && !isComplete && !errorEvent && phases.length === 0;
 
+  // Track if investigation ran in this session (not pre-existing snapshot data)
   useEffect(() => {
-    if (!mountedRef.current) {
-      // Skip initial render — don't pop on page reload with existing data
-      mountedRef.current = true;
-      return;
+    if (investigationRunning) wasRunningRef.current = true;
+  }, [investigationRunning]);
+
+  // Only show modal if investigation completed during THIS session
+  useEffect(() => {
+    if (isComplete && wasRunningRef.current) {
+      setShowCompletionModal(true);
+      wasRunningRef.current = false;
     }
-    if (isComplete) setShowCompletionModal(true);
   }, [isComplete]);
 
   if (isIdle) {

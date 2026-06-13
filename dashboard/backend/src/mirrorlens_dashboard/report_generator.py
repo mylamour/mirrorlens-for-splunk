@@ -8,16 +8,14 @@ from typing import Any
 from fpdf import FPDF
 
 # ── Colour palette (light / professional) ────────────────────────────────────
-_BG           = (255, 255, 255)   # page background
-_COVER_BG     = (15,  31,  60)    # cover page background (dark navy)
-_HEADER_FILL  = (15,  31,  60)    # table header row fill
-_ROW_ALT      = (245, 247, 250)   # alternating table row fill
-_ACCENT       = (0,   120, 190)   # blue accent (section titles, cover title)
-_CYAN_COVER   = (0,   188, 212)   # cyan used on cover only
-_TEXT         = (30,  40,  60)    # body text
-_SUBTEXT      = (90,  105, 130)   # secondary text
-_WHITE        = (255, 255, 255)
-_BORDER       = (200, 210, 220)   # light cell border
+_BG          = (255, 255, 255)   # page background
+_HEADER_FILL = (15,  31,  60)    # table header / top band fill
+_ROW_ALT     = (245, 247, 250)   # alternating table row fill
+_ACCENT      = (0,   120, 190)   # blue accent (section titles, cover title)
+_TEXT        = (30,  40,  60)    # body text
+_SUBTEXT     = (90,  105, 130)   # secondary text
+_WHITE       = (255, 255, 255)
+_BORDER      = (200, 210, 220)   # light cell border
 
 _SEVERITY_TEXT: dict[str, tuple[int, int, int]] = {
     "CRITICAL": (180, 30,  30),
@@ -152,78 +150,110 @@ def generate_pdf(data: dict[str, list[dict[str, Any]]]) -> bytes:
     pdf = _PDF()
 
     # ══════════════════════════════════════════════════════════════════
-    # Cover page
+    # Cover page (light theme)
     # ══════════════════════════════════════════════════════════════════
     pdf.add_page()
 
-    # Dark navy background
-    pdf.set_fill_color(*_COVER_BG)
+    # White background
+    pdf.set_fill_color(*_BG)
     pdf.rect(0, 0, pdf.w, pdf.h, "F")
 
-    # Left accent bar
+    # Top accent band
+    pdf.set_fill_color(*_HEADER_FILL)
+    pdf.rect(0, 0, pdf.w, 18, "F")
     pdf.set_fill_color(*_ACCENT)
-    pdf.rect(0, 0, 6, pdf.h, "F")
+    pdf.rect(0, 18, pdf.w, 2, "F")
 
-    # Title block (vertically centred)
-    pdf.set_y(50)
-    pdf.set_font("Helvetica", "B", 36)
-    pdf.set_text_color(*_CYAN_COVER)
-    pdf.cell(0, 16, "MirrorLens", align="C", ln=True)
-
-    pdf.set_font("Helvetica", "", 15)
+    # Product name in top band
+    pdf.set_y(4)
+    pdf.set_font("Helvetica", "B", 14)
     pdf.set_text_color(*_WHITE)
-    pdf.cell(0, 8, "Autonomous Security Investigation Report", align="C", ln=True)
+    pdf.cell(0, 10, "MIRRORLENS", align="C", ln=True)
 
+    # Title block
+    pdf.set_y(40)
+    pdf.set_font("Helvetica", "B", 34)
+    pdf.set_text_color(*_ACCENT)
+    pdf.cell(0, 16, "Security Investigation Report", align="C", ln=True)
+
+    pdf.set_font("Helvetica", "", 13)
+    pdf.set_text_color(*_SUBTEXT)
+    pdf.cell(0, 7, "Autonomous AI-Powered Analysis via Splunk MCP", align="C", ln=True)
+
+    pdf.ln(4)
     pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(*_SUBTEXT)
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d  %H:%M UTC")
-    pdf.cell(0, 7, ts, align="C", ln=True)
+    pdf.cell(0, 6, ts, align="C", ln=True)
 
     # Divider
     pdf.ln(6)
     pdf.set_draw_color(*_ACCENT)
     pdf.set_line_width(0.6)
-    pdf.line(50, pdf.get_y(), pdf.w - 50, pdf.get_y())
+    pdf.line(40, pdf.get_y(), pdf.w - 40, pdf.get_y())
     pdf.ln(8)
 
-    # Executive summary box
-    if exec_summary:
-        box_x, box_w = 30, pdf.w - 60
-        pdf.set_fill_color(25, 45, 80)
-        pdf.set_draw_color(*_ACCENT)
-        pdf.set_line_width(0.4)
-        y0 = pdf.get_y()
-        pdf.set_x(box_x)
-        pdf.set_font("Helvetica", "", 9)
-        pdf.set_text_color(210, 225, 240)
-        pdf.multi_cell(box_w, 5.5, _clean(exec_summary), border=0, align="J", fill=False)
-        y1 = pdf.get_y()
-        pdf.rect(box_x - 2, y0 - 2, box_w + 4, y1 - y0 + 4, "D")
-
-    # Stats row
-    pdf.ln(10)
+    # Stats row (light cards)
     stats = [
         ("TIMELINE STEPS", len(timeline)),
         ("DETECTION GAPS",  len(gaps)),
         ("SPL RULES",        len(use_cases)),
     ]
-    col_w = (pdf.epw - 20) / len(stats)
-    start_x = pdf.get_x() + 10
+    card_w = (pdf.epw - 20) / len(stats)
+    card_h = 22.0
+    start_x = 14 + 10
+    y_card = pdf.get_y()
     for idx, (label, value) in enumerate(stats):
-        x = start_x + idx * col_w
-        pdf.set_xy(x, pdf.get_y())
-        pdf.set_font("Helvetica", "B", 26)
-        pdf.set_text_color(*_CYAN_COVER)
-        pdf.cell(col_w, 12, str(value), align="C")
-        pdf.set_xy(x, pdf.get_y() + 12)
-        pdf.set_font("Helvetica", "", 8)
+        x = start_x + idx * card_w
+        # Card border
+        pdf.set_fill_color(240, 245, 252)
+        pdf.set_draw_color(*_BORDER)
+        pdf.set_line_width(0.3)
+        pdf.rect(x, y_card, card_w - 4, card_h, "FD")
+        # Value
+        pdf.set_xy(x, y_card + 2)
+        pdf.set_font("Helvetica", "B", 22)
+        pdf.set_text_color(*_ACCENT)
+        pdf.cell(card_w - 4, 12, str(value), align="C")
+        # Label
+        pdf.set_xy(x, y_card + 14)
+        pdf.set_font("Helvetica", "", 7)
         pdf.set_text_color(*_SUBTEXT)
-        pdf.cell(col_w, 5, label, align="C")
-    pdf.ln(18)
+        pdf.cell(card_w - 4, 6, label, align="C")
+    pdf.set_y(y_card + card_h + 8)
 
-    # Footer note
+    # Executive summary box
+    if exec_summary:
+        box_x, box_w = 20, pdf.w - 40
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_text_color(*_ACCENT)
+        pdf.set_x(box_x)
+        pdf.cell(box_w, 6, "EXECUTIVE SUMMARY", ln=True)
+        pdf.set_draw_color(*_ACCENT)
+        pdf.set_line_width(0.3)
+        pdf.line(box_x, pdf.get_y(), box_x + box_w, pdf.get_y())
+        pdf.ln(2)
+        pdf.set_fill_color(240, 245, 252)
+        pdf.set_draw_color(*_BORDER)
+        y0 = pdf.get_y()
+        pdf.set_x(box_x)
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(*_TEXT)
+        pdf.multi_cell(box_w, 5.5, _clean(exec_summary), border=0, align="J", fill=False)
+        y1 = pdf.get_y()
+        pdf.set_fill_color(240, 245, 252)
+        pdf.rect(box_x, y0, box_w, y1 - y0, "F")
+        pdf.set_x(box_x)
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(*_TEXT)
+        pdf.multi_cell(box_w, 5.5, _clean(exec_summary), border=0, align="J", fill=False)
+
+    # Bottom accent band
+    pdf.set_fill_color(*_HEADER_FILL)
+    pdf.rect(0, pdf.h - 14, pdf.w, 14, "F")
+    pdf.set_y(pdf.h - 10)
     pdf.set_font("Helvetica", "I", 8)
-    pdf.set_text_color(80, 100, 130)
+    pdf.set_text_color(*_SUBTEXT)
     pdf.cell(0, 5, "CONFIDENTIAL -- For authorized personnel only", align="C", ln=True)
 
     # ══════════════════════════════════════════════════════════════════

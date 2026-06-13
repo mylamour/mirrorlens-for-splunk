@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import GlassCard from "./shared/GlassCard";
 import DetailDrawer, { DetailField } from "./shared/DetailDrawer";
 import { useData } from "../data/context";
-import { triggerInvestigation, loadDemoData, fetchDashboardConfig, REPORT_PDF_URL } from "../data/api";
+import { triggerInvestigation, loadDemoData, fetchDashboardConfig, REPORT_PDF_URL, REPORT_FINDING_URL } from "../data/api";
 import { COLORS } from "../theme";
 import type { AccentColor } from "../theme";
 import type { DashboardConfig } from "../data/types";
@@ -24,6 +24,31 @@ export default function CenterPanel() {
   const [detail, setDetail] = useState<DetailItem | null>(null);
   const [showSupportingContext, setShowSupportingContext] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [exportingFinding, setExportingFinding] = useState(false);
+
+  const handleExportFinding = async (finding: Record<string, unknown>) => {
+    setExportingFinding(true);
+    try {
+      const res = await fetch(REPORT_FINDING_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ finding }),
+      });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const techId = String(finding.technique_id ?? "finding")
+        .toLowerCase().replace(/[./]/g, "-");
+      a.download = `mirrorlens-finding-${techId}-${new Date().toISOString().slice(0,10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportingFinding(false);
+    }
+  };
+
   const wasRunningRef = useRef(false);
 
   const latestPhase = new Map<string, string>();
@@ -240,6 +265,25 @@ export default function CenterPanel() {
         onClose={() => setDetail(null)}
         title={detail ? DETAIL_TITLES[detail.type] : ""}
         accent={detail ? DETAIL_ACCENTS[detail.type] : "cyan"}
+        footer={detail?.type === "timeline" ? (
+          <Button
+            variant="outlined"
+            size="small"
+            disabled={exportingFinding}
+            onClick={() => handleExportFinding(detail.data)}
+            sx={{
+              borderColor: `${COLORS.cyan}55`,
+              color: COLORS.cyan,
+              fontFamily: "'Orbitron'",
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: 1,
+              "&:hover": { background: `${COLORS.cyan}12`, borderColor: COLORS.cyan },
+            }}
+          >
+            {exportingFinding ? "EXPORTING..." : "EXPORT FINDING CARD"}
+          </Button>
+        ) : undefined}
       >
         {detail && <DetailContent item={detail} />}
       </DetailDrawer>

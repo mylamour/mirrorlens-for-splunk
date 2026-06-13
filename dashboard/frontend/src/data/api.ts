@@ -14,6 +14,7 @@ import type {
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
+export const REPORT_PDF_URL = `${API_BASE}/api/report/pdf`;
 const WS_BASE = API_BASE
   ? API_BASE.replace(/^http/, "ws")
   : `ws://${window.location.host}`;

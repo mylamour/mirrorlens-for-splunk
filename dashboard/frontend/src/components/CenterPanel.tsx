@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import GlassCard from "./shared/GlassCard";
 import DetailDrawer, { DetailField } from "./shared/DetailDrawer";
 import { useData } from "../data/context";
-import { triggerInvestigation, loadDemoData, fetchDashboardConfig } from "../data/api";
+import { triggerInvestigation, loadDemoData, fetchDashboardConfig, REPORT_PDF_URL } from "../data/api";
 import { COLORS } from "../theme";
 import type { AccentColor } from "../theme";
 import type { DashboardConfig } from "../data/types";
@@ -237,12 +237,14 @@ export default function CenterPanel() {
       <Dialog
         open={showCompletionModal}
         onClose={() => setShowCompletionModal(false)}
-        PaperProps={{
-          sx: {
-            background: "linear-gradient(135deg, #0E1628 0%, #070B16 100%)",
-            border: `1px solid ${COLORS.green}44`,
-            boxShadow: `0 0 40px ${COLORS.green}22`,
-            minWidth: 360,
+        slotProps={{
+          paper: {
+            sx: {
+              background: "linear-gradient(135deg, #0E1628 0%, #070B16 100%)",
+              border: `1px solid ${COLORS.green}44`,
+              boxShadow: `0 0 40px ${COLORS.green}22`,
+              minWidth: 360,
+            },
           },
         }}
       >
@@ -278,7 +280,7 @@ export default function CenterPanel() {
           </Button>
           <Button
             variant="contained"
-            onClick={() => { window.open("/api/report/pdf", "_blank"); setShowCompletionModal(false); }}
+            onClick={() => { window.open(REPORT_PDF_URL, "_blank"); setShowCompletionModal(false); }}
             sx={{
               background: `linear-gradient(135deg, ${COLORS.green}cc, ${COLORS.cyan}99)`,
               fontFamily: "'Orbitron'",

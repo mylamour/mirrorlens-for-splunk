@@ -135,10 +135,14 @@ def generate_pdf(data: dict[str, list[dict[str, Any]]]) -> bytes:
     recommendation = data.get("recommendation", [])
     mcp_calls      = data.get("mcp_call", [])
 
-    timeline        = next((e.get("data", []) for e in analysis if e.get("type") == "timeline"), [])
-    gaps            = next((e.get("data", []) for e in analysis if e.get("type") == "gaps"), [])
-    use_cases       = next((e.get("data", []) for e in analysis if e.get("type") == "use_cases"), [])
-    rec_event       = next((e for e in recommendation if e.get("data")), {})
+    # Use the LAST matching event so watch-mode reinvestigations always export current data.
+    def _last(events: list, key: str, val: str) -> dict:
+        return next((e for e in reversed(events) if e.get(key) == val), {})
+
+    timeline        = _last(analysis, "type", "timeline").get("data", [])
+    gaps            = _last(analysis, "type", "gaps").get("data", [])
+    use_cases       = _last(analysis, "type", "use_cases").get("data", [])
+    rec_event       = next((e for e in reversed(recommendation) if e.get("data")), {})
     recommendations = rec_event.get("data", [])
     exec_summary    = rec_event.get("executive_summary", "")
 

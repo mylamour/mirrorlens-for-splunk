@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Box, Button, Typography } from "@mui/material";
 import { motion } from "framer-motion";
 import { useData } from "../data/context";
-import { resetDemoData } from "../data/api";
+import { resetDemoData, REPORT_PDF_URL } from "../data/api";
 import { COLORS } from "../theme";
 import MetricCard from "./shared/MetricCard";
 
@@ -92,7 +92,7 @@ export default function Header({ showTrace = false, onOpenTrace, showExport = fa
         <Button
           variant="outlined"
           size="small"
-          onClick={() => window.open("/api/report/pdf", "_blank")}
+          onClick={() => window.open(REPORT_PDF_URL, "_blank")}
           sx={{
             borderColor: `${COLORS.green}55`,
             color: COLORS.green,

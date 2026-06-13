@@ -10,6 +10,7 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "mirrorlens-for-splunk",
+    "fpdf2>=2.7",
 ]
 
 [tool.uv.sources]

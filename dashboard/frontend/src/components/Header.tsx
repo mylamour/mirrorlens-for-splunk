@@ -6,7 +6,7 @@ import { resetDemoData } from "../data/api";
 import { COLORS } from "../theme";
 import MetricCard from "./shared/MetricCard";
 
-export default function Header({ showTrace = false, onOpenTrace }: { showTrace?: boolean; onOpenTrace?: () => void }) {
+export default function Header({ showTrace = false, onOpenTrace, showExport = false }: { showTrace?: boolean; onOpenTrace?: () => void; showExport?: boolean }) {
   const { discovery, evidence, analysis, status, statusEvents, watchEvents, investigationRunning } = useData();
   const [resetting, setResetting] = useState(false);
 
@@ -87,6 +87,28 @@ export default function Header({ showTrace = false, onOpenTrace }: { showTrace?:
           </motion.div>
         ) : null;
       })()}
+
+      {showExport && (
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={() => window.open("/api/report/pdf", "_blank")}
+          sx={{
+            borderColor: `${COLORS.green}55`,
+            color: COLORS.green,
+            fontFamily: "'Orbitron'",
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: 1,
+            minWidth: 128,
+            px: 1,
+            py: 0.25,
+            "&:hover": { background: `${COLORS.green}12`, borderColor: COLORS.green },
+          }}
+        >
+          EXPORT REPORT
+        </Button>
+      )}
 
       {showTrace && (
         <Button

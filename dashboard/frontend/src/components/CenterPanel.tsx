@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Box, Typography, Button, TextField, InputAdornment, IconButton } from "@mui/material";
+import { Box, Typography, Button, TextField, InputAdornment, IconButton, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import GlassCard from "./shared/GlassCard";
 import DetailDrawer, { DetailField } from "./shared/DetailDrawer";
@@ -23,14 +23,20 @@ export default function CenterPanel() {
   const { phases, discovery, evidence, analysis, recommendations, investigationRunning, statusEvents } = useData();
   const [detail, setDetail] = useState<DetailItem | null>(null);
   const [showSupportingContext, setShowSupportingContext] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
 
   const latestPhase = new Map<string, string>();
   for (const p of phases) latestPhase.set(p.name, p.status);
 
   const currentStep = getCurrentStep(latestPhase);
   const isComplete = statusEvents.some((s) => s.event === "completed");
+  const completedEvent = statusEvents.find((s) => s.event === "completed");
   const errorEvent = statusEvents.find((s) => s.event === "error");
   const isIdle = !investigationRunning && !isComplete && !errorEvent && phases.length === 0;
+
+  useEffect(() => {
+    if (isComplete) setShowCompletionModal(true);
+  }, [isComplete]);
 
   if (isIdle) {
     return (
@@ -227,6 +233,66 @@ export default function CenterPanel() {
       >
         {detail && <DetailContent item={detail} />}
       </DetailDrawer>
+
+      <Dialog
+        open={showCompletionModal}
+        onClose={() => setShowCompletionModal(false)}
+        PaperProps={{
+          sx: {
+            background: "linear-gradient(135deg, #0E1628 0%, #070B16 100%)",
+            border: `1px solid ${COLORS.green}44`,
+            boxShadow: `0 0 40px ${COLORS.green}22`,
+            minWidth: 360,
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontFamily: "'Orbitron'", fontWeight: 700, color: COLORS.green, letterSpacing: 1.5, pb: 1 }}>
+          Investigation Complete
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", gap: 3, mb: 2 }}>
+            {[
+              { label: "ITERATIONS", value: completedEvent?.iterations ?? "—" },
+              { label: "EVENTS", value: completedEvent?.total_events_collected ?? "—" },
+            ].map(({ label, value }) => (
+              <Box key={label} sx={{ textAlign: "center" }}>
+                <Typography sx={{ fontFamily: "'Orbitron'", fontWeight: 700, fontSize: 28, color: COLORS.cyan, lineHeight: 1 }}>
+                  {String(value)}
+                </Typography>
+                <Typography variant="caption" sx={{ color: "grey.500", fontFamily: "'JetBrains Mono'", fontSize: 10, letterSpacing: 1 }}>
+                  {label}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+          <Typography variant="body2" sx={{ color: "grey.400" }}>
+            Download the full PDF report with the MITRE ATT&CK timeline, detection gaps, generated SPL rules, and response recommendations.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button
+            onClick={() => setShowCompletionModal(false)}
+            sx={{ color: "grey.500", fontFamily: "'Orbitron'", fontSize: 10 }}
+          >
+            Dismiss
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => { window.open("/api/report/pdf", "_blank"); setShowCompletionModal(false); }}
+            sx={{
+              background: `linear-gradient(135deg, ${COLORS.green}cc, ${COLORS.cyan}99)`,
+              fontFamily: "'Orbitron'",
+              fontWeight: 700,
+              fontSize: 11,
+              letterSpacing: 1,
+              color: "#070B16",
+              "&:hover": { background: `linear-gradient(135deg, ${COLORS.green}, ${COLORS.cyan})` },
+            }}
+          >
+            Download PDF Report
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

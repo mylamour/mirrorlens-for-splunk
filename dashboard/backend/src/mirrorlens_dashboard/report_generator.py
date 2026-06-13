@@ -587,6 +587,14 @@ def _finding_section_label(pdf: ReportPDF, label: str) -> None:
     pdf.ln(3)
 
 
+def _truncate_words(text: str, max_chars: int) -> str:
+    """Truncate at a word boundary and append ellipsis if needed."""
+    if len(text) <= max_chars:
+        return text
+    cut = text[:max_chars].rsplit(" ", 1)[0].rstrip(",;:")
+    return cut + "…"
+
+
 def generate_finding_pdf(finding: dict[str, Any], related: dict[str, Any] | None = None) -> bytes:
     """Generate a finding card PDF enriched with detection rules and response actions."""
     pdf = ReportPDF()
@@ -647,35 +655,44 @@ def generate_finding_pdf(finding: dict[str, Any], related: dict[str, Any] | None
     _finding_section_label(pdf, "DETECTION COVERAGE")
     if rules:
         for rule in rules:
-            rule_name = str(rule.get("name", ""))
-            rule_desc = str(rule.get("description", ""))
-            spl       = str(rule.get("spl_query", "")).strip()
-            mitre     = str(rule.get("mitre_technique", ""))
+            rule_name  = str(rule.get("name", ""))
+            rule_desc  = str(rule.get("description", ""))
+            # Limit SPL to ~3 lines (≈240 chars) so it doesn't swallow the page
+            spl_full   = str(rule.get("spl_query", "")).strip()
+            spl        = _truncate_words(spl_full, 240)
+            match_type = str(rule.get("_match", ""))
+            match_note = "  (tactic match)" if match_type == "tactic" else ""
 
-            pdf.ensure_space(25)
-            badge = mitre if mitre else "RULE"
-            pdf.heading_line(badge, rule_name)
+            pdf.ensure_space(30)
+            # Rule name — use body font (supports Unicode em-dash, etc.)
+            pdf.set_x(pdf.l_margin)
+            pdf.set_font(pdf._body, size=9)
+            pdf.set_text_color(*_ACCENT)
+            pdf.multi_cell(pdf.epw, 5, rule_name + match_note)
+            pdf.set_text_color(*_SUBTEXT)
             if rule_desc:
-                pdf.body_text(rule_desc[:280] + ("…" if len(rule_desc) > 280 else ""), size=8.5)
+                pdf.body_text(_truncate_words(rule_desc, 220), size=8.5)
             if spl:
-                pdf.code_box(spl[:500] + ("…" if len(spl) > 500 else ""))
+                pdf.code_box(spl)
             pdf.ln(2)
     else:
         pdf.body_text("No detection rule found for this technique in the current investigation.", size=8.5)
 
     # ── Response Actions ──────────────────────────────────────────────────────
+    # Estimate space needed: ~18mm per action; if tight, start on a new page
     actions: list[dict[str, Any]] = (related or {}).get("actions", [])
+    actions_height = 12 + len(actions) * 22
+    pdf.ensure_space(actions_height)
     _finding_section_label(pdf, "RESPONSE ACTIONS")
     if actions:
         for act in actions:
-            raw    = str(act.get("action", ""))
-            # First word(s) before " — " is the category badge
-            parts  = raw.split(" \u2014 ", 1)
-            badge  = parts[0].strip().split()[0] if parts else "ACTION"
-            body   = parts[1].strip() if len(parts) > 1 else raw
+            raw   = str(act.get("action", ""))
+            parts = raw.split(" \u2014 ", 1)
+            badge = parts[0].strip().split()[0] if parts else "ACTION"
+            body  = parts[1].strip() if len(parts) > 1 else raw
             pdf.ensure_space(18)
             pdf.heading_line(badge, "")
-            pdf.body_text(body[:350] + ("…" if len(body) > 350 else ""), size=8.5)
+            pdf.body_text(_truncate_words(body, 320), size=8.5)
             pdf.ln(2)
     else:
         pdf.body_text("No response actions available for this finding.", size=8.5)

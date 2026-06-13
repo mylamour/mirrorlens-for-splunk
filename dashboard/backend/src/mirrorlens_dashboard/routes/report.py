@@ -60,14 +60,22 @@ def _related_context(finding: dict[str, Any]) -> dict[str, Any]:
     tech_id = str(finding.get("technique_id", "")).upper()
     tactic  = str(finding.get("tactic", "")).lower()
 
-    # Detection rules: match by MITRE technique or tactic
+    # Detection rules: exact technique match first, fall back to tactic match only
+    # when no exact matches exist (avoids showing loosely-related rules)
     uc_ev   = next((e for e in reversed(analysis) if e.get("type") == "use_cases"), {})
     all_ucs = uc_ev.get("data", [])
-    matched_rules: list[dict[str, Any]] = [
-        uc for uc in all_ucs
-        if (tech_id and str(uc.get("mitre_technique", "")).upper() == tech_id)
-        or (tactic  and str(uc.get("mitre_tactic",    "")).lower()  == tactic)
-    ][:3]
+    exact_rules = [
+        {**uc, "_match": "exact"}
+        for uc in all_ucs
+        if tech_id and str(uc.get("mitre_technique", "")).upper() == tech_id
+    ]
+    tactic_rules = [
+        {**uc, "_match": "tactic"}
+        for uc in all_ucs
+        if tactic and str(uc.get("mitre_tactic", "")).lower() == tactic
+        and str(uc.get("mitre_technique", "")).upper() != tech_id
+    ]
+    matched_rules: list[dict[str, Any]] = (exact_rules or tactic_rules)[:3]
 
     # Response actions: score by keyword overlap with technique_id, tactic, description
     rec_ev  = next((e for e in reversed(recommendation) if e.get("data")), {})

@@ -7,33 +7,34 @@ from typing import Any
 
 from fpdf import FPDF
 
-# ── Colour palette (light / professional) ────────────────────────────────────
-_BG          = (255, 255, 255)   # page background
-_HEADER_FILL = (15,  31,  60)    # table header / top band fill
-_ROW_ALT     = (245, 247, 250)   # alternating table row fill
-_ACCENT      = (0,   120, 190)   # blue accent (section titles, cover title)
-_TEXT        = (30,  40,  60)    # body text
-_SUBTEXT     = (90,  105, 130)   # secondary text
+# ── Colour palette (professional report, light throughout) ───────────────────
 _WHITE       = (255, 255, 255)
-_BORDER      = (200, 210, 220)   # light cell border
+_BG          = (255, 255, 255)
+_TEXT        = (30,  35,  45)    # near-black body text
+_SUBTEXT     = (100, 110, 125)   # secondary / captions
+_ACCENT      = (0,   90,  170)   # blue accent — titles, borders
+_ACCENT_LIGHT= (230, 238, 250)   # very light blue — header fills, card bg
+_ROW_ALT     = (247, 249, 252)   # alternating row tint
+_BORDER      = (200, 210, 220)   # table cell borders
+_RULE        = (180, 195, 215)   # horizontal rules
 
 _SEVERITY_TEXT: dict[str, tuple[int, int, int]] = {
     "CRITICAL": (180, 30,  30),
-    "HIGH":     (200, 80,  20),
-    "MEDIUM":   (160, 120,  0),
-    "LOW":      (30,  140, 80),
+    "HIGH":     (190, 75,  15),
+    "MEDIUM":   (150, 110,  0),
+    "LOW":      (25,  130, 70),
     "P1":       (180, 30,  30),
-    "P2":       (200, 80,  20),
-    "P3":       (160, 120,  0),
+    "P2":       (190, 75,  15),
+    "P3":       (150, 110,  0),
 }
 
 _UNICODE_MAP = str.maketrans({
     "—": "--",  "–": "-",
-    "‘": "'",   "’": "'",
-    "“": '"',   "”": '"',
+    "'": "'",   "'": "'",
+    "“": '"',  "”": '"',
     "…": "...", "•": "*",
     "→": "->",  "←": "<-",
-    " ": " ",   "·": "*",
+    " ": " ", "·": "*",
 })
 
 
@@ -45,42 +46,39 @@ def _clean(text: str) -> str:
 class _PDF(FPDF):
     def __init__(self) -> None:
         super().__init__(orientation="L", unit="mm", format="A4")
-        self.set_auto_page_break(auto=True, margin=18)
-        self.set_margins(14, 14, 14)
+        self.set_auto_page_break(auto=True, margin=20)
+        self.set_margins(18, 18, 18)
 
     def header(self) -> None:
         if self.page_no() == 1:
             return
-        self.set_fill_color(*_BG)
-        self.rect(0, 0, self.w, 10, "F")
-        self.set_font("Helvetica", "B", 7)
+        self.set_font("Helvetica", "", 7)
         self.set_text_color(*_SUBTEXT)
-        self.set_y(3)
-        self.cell(0, 5, "MirrorLens -- Autonomous Security Investigation Report", align="L")
-        self.set_y(3)
-        self.cell(0, 5, f"Page {self.page_no()}", align="R")
-        self.set_y(10)
-        self.set_draw_color(*_BORDER)
+        self.set_y(8)
+        self.cell(0, 4, "MirrorLens  |  Autonomous Security Investigation Report", align="L")
+        self.set_y(8)
+        self.cell(0, 4, f"Page {self.page_no()}", align="R")
+        self.set_y(13)
+        self.set_draw_color(*_RULE)
         self.set_line_width(0.2)
-        self.line(14, 10, self.w - 14, 10)
-        self.ln(3)
+        self.line(18, 13, self.w - 18, 13)
+        self.ln(4)
 
     def footer(self) -> None:
-        pass  # page number is in header for content pages
+        pass
 
     def section_title(self, title: str) -> None:
-        self.ln(4)
-        self.set_font("Helvetica", "B", 14)
+        self.ln(5)
+        self.set_font("Helvetica", "B", 13)
         self.set_text_color(*_ACCENT)
-        self.cell(0, 9, _clean(title), ln=True)
+        self.cell(0, 8, _clean(title), ln=True)
         self.set_draw_color(*_ACCENT)
-        self.set_line_width(0.5)
-        self.line(14, self.get_y(), self.w - 14, self.get_y())
+        self.set_line_width(0.4)
+        self.line(18, self.get_y(), self.w - 18, self.get_y())
         self.set_text_color(*_TEXT)
         self.ln(3)
 
-    def _fit_text(self, text: str, max_w: float) -> str:
-        """Truncate text to fit within max_w mm using actual rendered width."""
+    def _fit(self, text: str, max_w: float) -> str:
         s = _clean(text)
         while s and self.get_string_width(s) > max_w:
             s = s[:-1]
@@ -96,33 +94,30 @@ class _PDF(FPDF):
         severity_col: int | None = None,
     ) -> None:
         row_h = 7.0
-        pad = 1.5
+        pad   = 2.0
 
-        # ── Header row ───────────────────────────────────────────────
-        self.set_fill_color(*_HEADER_FILL)
-        self.set_text_color(*_WHITE)
+        # Header row — light blue fill, accent text
+        self.set_fill_color(*_ACCENT_LIGHT)
+        self.set_text_color(*_ACCENT)
         self.set_font("Helvetica", "B", 8)
         self.set_draw_color(*_BORDER)
-        self.set_line_width(0.1)
+        self.set_line_width(0.15)
         for h, w in zip(headers, widths):
-            self.set_x(self.get_x())
-            text = self._fit_text(h, w - pad * 2)
-            self.cell(w, row_h, text, border=1, fill=True, align="C")
+            self.cell(w, row_h, self._fit(h, w - pad * 2),
+                      border=1, fill=True, align="C")
         self.ln()
 
-        # ── Data rows ────────────────────────────────────────────────
-        self.set_font("Helvetica", "", 7.5)
+        # Data rows
         for i, row in enumerate(rows):
-            if self.get_y() > self.h - 24:
+            if self.get_y() > self.h - 26:
                 self.add_page()
             fill = i % 2 == 1
             self.set_fill_color(*(_ROW_ALT if fill else _BG))
             for j, (cell_text, w) in enumerate(zip(row, widths)):
-                text = self._fit_text(cell_text, w - pad * 2)
+                text = self._fit(cell_text, w - pad * 2)
                 if severity_col is not None and j == severity_col:
                     sev = str(cell_text).strip().upper()
-                    r, g, b = _SEVERITY_TEXT.get(sev, _TEXT)
-                    self.set_text_color(r, g, b)
+                    self.set_text_color(*_SEVERITY_TEXT.get(sev, _TEXT))
                     self.set_font("Helvetica", "B", 7.5)
                 else:
                     self.set_text_color(*_TEXT)
@@ -150,124 +145,111 @@ def generate_pdf(data: dict[str, list[dict[str, Any]]]) -> bytes:
     pdf = _PDF()
 
     # ══════════════════════════════════════════════════════════════════
-    # Cover page (light theme)
+    # Page 1 — Cover
     # ══════════════════════════════════════════════════════════════════
     pdf.add_page()
 
-    # White background
-    pdf.set_fill_color(*_BG)
-    pdf.rect(0, 0, pdf.w, pdf.h, "F")
-
-    # Top accent band
-    pdf.set_fill_color(*_HEADER_FILL)
-    pdf.rect(0, 0, pdf.w, 18, "F")
+    # Thin top accent line
     pdf.set_fill_color(*_ACCENT)
-    pdf.rect(0, 18, pdf.w, 2, "F")
+    pdf.rect(0, 0, pdf.w, 3, "F")
 
-    # Product name in top band
-    pdf.set_y(4)
-    pdf.set_font("Helvetica", "B", 14)
-    pdf.set_text_color(*_WHITE)
-    pdf.cell(0, 10, "MIRRORLENS", align="C", ln=True)
-
-    # Title block
-    pdf.set_y(40)
-    pdf.set_font("Helvetica", "B", 34)
+    # Logo / product name
+    pdf.set_y(16)
+    pdf.set_font("Helvetica", "B", 11)
     pdf.set_text_color(*_ACCENT)
-    pdf.cell(0, 16, "Security Investigation Report", align="C", ln=True)
+    pdf.cell(0, 6, "MIRRORLENS", align="C", ln=True)
 
-    pdf.set_font("Helvetica", "", 13)
+    pdf.set_font("Helvetica", "", 9)
     pdf.set_text_color(*_SUBTEXT)
-    pdf.cell(0, 7, "Autonomous AI-Powered Analysis via Splunk MCP", align="C", ln=True)
-
-    pdf.ln(4)
-    pdf.set_font("Helvetica", "", 10)
-    pdf.set_text_color(*_SUBTEXT)
-    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d  %H:%M UTC")
-    pdf.cell(0, 6, ts, align="C", ln=True)
+    pdf.cell(0, 5, "Autonomous AI Security Investigator", align="C", ln=True)
 
     # Divider
     pdf.ln(6)
-    pdf.set_draw_color(*_ACCENT)
-    pdf.set_line_width(0.6)
+    pdf.set_draw_color(*_RULE)
+    pdf.set_line_width(0.3)
     pdf.line(40, pdf.get_y(), pdf.w - 40, pdf.get_y())
-    pdf.ln(8)
+    pdf.ln(10)
 
-    # Stats row (light cards)
+    # Report title
+    pdf.set_font("Helvetica", "B", 28)
+    pdf.set_text_color(*_TEXT)
+    pdf.cell(0, 14, "Security Investigation Report", align="C", ln=True)
+
+    pdf.set_font("Helvetica", "", 11)
+    pdf.set_text_color(*_SUBTEXT)
+    pdf.cell(0, 7, "Powered by Splunk MCP Server", align="C", ln=True)
+
+    pdf.ln(3)
+    pdf.set_font("Helvetica", "", 9)
+    ts = datetime.now(timezone.utc).strftime("%B %d, %Y  --  %H:%M UTC")
+    pdf.cell(0, 6, _clean(ts), align="C", ln=True)
+
+    # Stats row
+    pdf.ln(10)
     stats = [
-        ("TIMELINE STEPS", len(timeline)),
-        ("DETECTION GAPS",  len(gaps)),
-        ("SPL RULES",        len(use_cases)),
+        ("Timeline Steps", len(timeline)),
+        ("Detection Gaps",  len(gaps)),
+        ("SPL Rules",        len(use_cases)),
     ]
-    card_w = (pdf.epw - 20) / len(stats)
-    card_h = 22.0
-    start_x = 14 + 10
+    card_w = (pdf.epw - 16) / len(stats)
+    card_h = 20.0
     y_card = pdf.get_y()
     for idx, (label, value) in enumerate(stats):
-        x = start_x + idx * card_w
-        # Card border
-        pdf.set_fill_color(240, 245, 252)
+        x = 18 + 8 + idx * card_w
+        pdf.set_fill_color(*_ACCENT_LIGHT)
         pdf.set_draw_color(*_BORDER)
-        pdf.set_line_width(0.3)
+        pdf.set_line_width(0.25)
         pdf.rect(x, y_card, card_w - 4, card_h, "FD")
+        # Left accent bar on card
+        pdf.set_fill_color(*_ACCENT)
+        pdf.rect(x, y_card, 2, card_h, "F")
         # Value
-        pdf.set_xy(x, y_card + 2)
-        pdf.set_font("Helvetica", "B", 22)
+        pdf.set_xy(x + 2, y_card + 2)
+        pdf.set_font("Helvetica", "B", 20)
         pdf.set_text_color(*_ACCENT)
-        pdf.cell(card_w - 4, 12, str(value), align="C")
+        pdf.cell(card_w - 6, 10, str(value), align="C")
         # Label
-        pdf.set_xy(x, y_card + 14)
-        pdf.set_font("Helvetica", "", 7)
+        pdf.set_xy(x + 2, y_card + 12)
+        pdf.set_font("Helvetica", "", 7.5)
         pdf.set_text_color(*_SUBTEXT)
-        pdf.cell(card_w - 4, 6, label, align="C")
+        pdf.cell(card_w - 6, 6, label, align="C")
+
     pdf.set_y(y_card + card_h + 8)
 
-    # Executive summary box
+    # Executive summary
     if exec_summary:
-        box_x, box_w = 20, pdf.w - 40
         pdf.set_font("Helvetica", "B", 9)
-        pdf.set_text_color(*_ACCENT)
-        pdf.set_x(box_x)
-        pdf.cell(box_w, 6, "EXECUTIVE SUMMARY", ln=True)
-        pdf.set_draw_color(*_ACCENT)
-        pdf.set_line_width(0.3)
-        pdf.line(box_x, pdf.get_y(), box_x + box_w, pdf.get_y())
-        pdf.ln(2)
-        pdf.set_fill_color(240, 245, 252)
-        pdf.set_draw_color(*_BORDER)
-        y0 = pdf.get_y()
-        pdf.set_x(box_x)
+        pdf.set_text_color(*_SUBTEXT)
+        pdf.set_x(18)
+        pdf.cell(0, 5, "EXECUTIVE SUMMARY", ln=True)
+        pdf.set_draw_color(*_RULE)
+        pdf.set_line_width(0.2)
+        pdf.line(18, pdf.get_y(), pdf.w - 18, pdf.get_y())
+        pdf.ln(3)
+        pdf.set_x(18)
         pdf.set_font("Helvetica", "", 9)
         pdf.set_text_color(*_TEXT)
-        pdf.multi_cell(box_w, 5.5, _clean(exec_summary), border=0, align="J", fill=False)
-        y1 = pdf.get_y()
-        pdf.set_fill_color(240, 245, 252)
-        pdf.rect(box_x, y0, box_w, y1 - y0, "F")
-        pdf.set_x(box_x)
-        pdf.set_font("Helvetica", "", 9)
-        pdf.set_text_color(*_TEXT)
-        pdf.multi_cell(box_w, 5.5, _clean(exec_summary), border=0, align="J", fill=False)
+        pdf.multi_cell(pdf.epw, 5.5, _clean(exec_summary), align="J")
 
-    # Bottom accent band
-    pdf.set_fill_color(*_HEADER_FILL)
-    pdf.rect(0, pdf.h - 14, pdf.w, 14, "F")
-    pdf.set_y(pdf.h - 10)
+    # Bottom rule + confidential note
+    pdf.set_y(pdf.h - 16)
+    pdf.set_draw_color(*_RULE)
+    pdf.set_line_width(0.2)
+    pdf.line(18, pdf.get_y(), pdf.w - 18, pdf.get_y())
+    pdf.ln(3)
     pdf.set_font("Helvetica", "I", 8)
     pdf.set_text_color(*_SUBTEXT)
-    pdf.cell(0, 5, "CONFIDENTIAL -- For authorized personnel only", align="C", ln=True)
+    pdf.cell(0, 5, "CONFIDENTIAL -- For authorized personnel only", align="C")
 
     # ══════════════════════════════════════════════════════════════════
-    # Content pages (white background)
+    # Content pages
     # ══════════════════════════════════════════════════════════════════
 
-    # ── Attack timeline ──────────────────────────────────────────────
     if timeline:
         pdf.add_page()
-        pdf.set_fill_color(*_BG)
-        pdf.rect(0, 0, pdf.w, pdf.h, "F")
         pdf.section_title("Attack Timeline  (MITRE ATT&CK)")
-        headers = ["Timestamp",  "Technique ID", "Technique",  "Tactic",  "Host",  "Description",                       "Conf."]
-        widths  = [32.0,         18.0,           44.0,         28.0,      24.0,    88.0,                                10.0]
+        headers = ["Timestamp",  "Technique ID", "Technique",  "Tactic",  "Host",  "Description",  "Conf."]
+        widths  = [32.0,         18.0,           44.0,         28.0,      24.0,    88.0,            10.0]
         rows = [
             [
                 str(s.get("timestamp", ""))[:19],
@@ -282,11 +264,8 @@ def generate_pdf(data: dict[str, list[dict[str, Any]]]) -> bytes:
         ]
         pdf.table(headers, widths, rows)
 
-    # ── Detection gaps ───────────────────────────────────────────────
     if gaps:
         pdf.add_page()
-        pdf.set_fill_color(*_BG)
-        pdf.rect(0, 0, pdf.w, pdf.h, "F")
         pdf.section_title("Detection Gaps")
         headers = ["Severity", "Technique ID", "Technique",  "Gap Description",  "Recommended SPL"]
         widths  = [18.0,       16.0,           36.0,         68.0,               106.0]
@@ -302,11 +281,8 @@ def generate_pdf(data: dict[str, list[dict[str, Any]]]) -> bytes:
         ]
         pdf.table(headers, widths, rows, severity_col=0)
 
-    # ── Generated detection rules ────────────────────────────────────
     if use_cases:
         pdf.add_page()
-        pdf.set_fill_color(*_BG)
-        pdf.rect(0, 0, pdf.w, pdf.h, "F")
         pdf.section_title("Generated Detection Rules")
         headers = ["Priority", "Name",  "MITRE",  "Tactic",  "SPL Query",  "Alert Condition"]
         widths  = [14.0,       52.0,    20.0,      22.0,      120.0,        16.0]
@@ -323,11 +299,8 @@ def generate_pdf(data: dict[str, list[dict[str, Any]]]) -> bytes:
         ]
         pdf.table(headers, widths, rows, severity_col=0)
 
-    # ── Response recommendations ─────────────────────────────────────
     if recommendations:
         pdf.add_page()
-        pdf.set_fill_color(*_BG)
-        pdf.rect(0, 0, pdf.w, pdf.h, "F")
         pdf.section_title("Response Recommendations  (Dry-Run)")
         headers = ["#",   "Category", "Action",  "Risk",   "Validation SPL"]
         widths  = [8.0,   26.0,       80.0,       14.0,    116.0]
@@ -343,15 +316,12 @@ def generate_pdf(data: dict[str, list[dict[str, Any]]]) -> bytes:
         ]
         pdf.table(headers, widths, rows, severity_col=3)
 
-    # ── Appendix: MCP proof ──────────────────────────────────────────
     spl_calls = [
         c for c in mcp_calls
         if c.get("tool") == "run_query" and c.get("status") == "done" and c.get("spl")
     ]
     if spl_calls:
         pdf.add_page()
-        pdf.set_fill_color(*_BG)
-        pdf.rect(0, 0, pdf.w, pdf.h, "F")
         pdf.section_title("Appendix -- MCP Proof: SPL Queries Executed")
         headers = ["#",   "SPL Query",  "Rows"]
         widths  = [8.0,   228.0,        8.0]

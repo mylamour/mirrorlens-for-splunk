@@ -2,11 +2,11 @@ import { useState } from "react";
 import { Box, Button, Typography } from "@mui/material";
 import { motion } from "framer-motion";
 import { useData } from "../data/context";
-import { resetDemoData, REPORT_PDF_URL } from "../data/api";
+import { resetDemoData } from "../data/api";
 import { COLORS } from "../theme";
 import MetricCard from "./shared/MetricCard";
 
-export default function Header({ showTrace = false, onOpenTrace, showExport = false }: { showTrace?: boolean; onOpenTrace?: () => void; showExport?: boolean }) {
+export default function Header({ showTrace = false, onOpenTrace }: { showTrace?: boolean; onOpenTrace?: () => void }) {
   const { discovery, evidence, analysis, status, statusEvents, watchEvents, investigationRunning } = useData();
   const [resetting, setResetting] = useState(false);
 
@@ -87,28 +87,6 @@ export default function Header({ showTrace = false, onOpenTrace, showExport = fa
           </motion.div>
         ) : null;
       })()}
-
-      {showExport && (
-        <Button
-          variant="outlined"
-          size="small"
-          onClick={() => window.open(REPORT_PDF_URL, "_blank")}
-          sx={{
-            borderColor: `${COLORS.green}55`,
-            color: COLORS.green,
-            fontFamily: "'Orbitron'",
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: 1,
-            minWidth: 128,
-            px: 1,
-            py: 0.25,
-            "&:hover": { background: `${COLORS.green}12`, borderColor: COLORS.green },
-          }}
-        >
-          EXPORT REPORT
-        </Button>
-      )}
 
       {showTrace && (
         <Button

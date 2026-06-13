@@ -12,8 +12,6 @@ export default function App() {
   const isIdle = phases.length === 0;
   const hasTrace = aiCalls.length > 0 || mcpCalls.length > 0 || statusEvents.length > 0 || investigationRunning;
   const showTrace = !isIdle && hasTrace;
-  const isComplete = statusEvents.some((s) => s.event === "completed");
-
   return (
     <Box
       sx={{
@@ -28,7 +26,7 @@ export default function App() {
       }}
     >
       <Box sx={{ gridArea: "header" }}>
-        <Header showTrace={showTrace} onOpenTrace={() => setTraceOpen(true)} showExport={isComplete} />
+        <Header showTrace={showTrace} onOpenTrace={() => setTraceOpen(true)} />
       </Box>
 
       <Box sx={{ gridArea: "main", overflow: "hidden", p: 1, minHeight: 0 }}>

@@ -575,6 +575,90 @@ def _render_appendix(pdf: ReportPDF, mcp_calls: list) -> None:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
+def generate_finding_pdf(finding: dict[str, Any]) -> bytes:
+    """Generate a 1-page PDF card for a single timeline finding."""
+    pdf = ReportPDF()
+    pdf.setup()
+    pdf.set_auto_page_break(False)
+    pdf.add_page()
+
+    # Top accent line
+    pdf.set_fill_color(*_ACCENT)
+    pdf.rect(0, 0, pdf.w, 3, "F")
+
+    # Header bar
+    pdf.set_y(10)
+    pdf._hbold(9)
+    pdf.set_text_color(*_ACCENT)
+    pdf.cell(0, 5, "MIRRORLENS", align="L", new_x="LMARGIN", new_y="NEXT")
+    pdf._hbold(8)
+    pdf.set_text_color(*_SUBTEXT)
+    pdf.set_y(10)
+    pdf.cell(0, 5, "Security Finding Card", align="R")
+    pdf.ln(7)
+    pdf.set_draw_color(*_RULE)
+    pdf.set_line_width(0.2)
+    pdf.line(18, pdf.get_y(), pdf.w - 18, pdf.get_y())
+    pdf.ln(6)
+
+    # Heading line: [CONFIDENCE]  technique_id -- technique_name
+    confidence = str(finding.get("confidence", "")).upper()
+    tech_id    = finding.get("technique_id", "")
+    tech_name  = finding.get("technique_name", "")
+    title      = f"{tech_id}  {('--  ' + tech_name) if tech_name else ''}".strip()
+    pdf.heading_line(confidence or "INFO", title)
+
+    # Metadata row
+    pairs = []
+    if finding.get("timestamp"):
+        pairs.append(("Timestamp", str(finding["timestamp"])[:19]))
+    if finding.get("tactic"):
+        pairs.append(("Tactic", str(finding["tactic"])))
+    if finding.get("host"):
+        pairs.append(("Host", str(finding["host"])))
+    if pairs:
+        pdf.kv_line(pairs)
+    pdf.ln(4)
+
+    # Description
+    desc = finding.get("description", "")
+    if desc:
+        pdf._hbold(8)
+        pdf.set_text_color(*_SUBTEXT)
+        pdf.cell(0, 4, "DESCRIPTION", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_draw_color(*_RULE)
+        pdf.set_line_width(0.15)
+        pdf.line(18, pdf.get_y(), pdf.w - 18, pdf.get_y())
+        pdf.ln(3)
+        pdf.body_text(desc, size=9)
+        pdf.ln(3)
+
+    # Evidence
+    evidence = finding.get("evidence", "")
+    if evidence:
+        pdf._hbold(8)
+        pdf.set_text_color(*_SUBTEXT)
+        pdf.cell(0, 4, "EVIDENCE", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_draw_color(*_RULE)
+        pdf.set_line_width(0.15)
+        pdf.line(18, pdf.get_y(), pdf.w - 18, pdf.get_y())
+        pdf.ln(3)
+        pdf.body_text(evidence, size=8.5)
+
+    # Footer
+    pdf.set_y(pdf.h - 12)
+    pdf.set_draw_color(*_RULE)
+    pdf.set_line_width(0.2)
+    pdf.line(18, pdf.get_y(), pdf.w - 18, pdf.get_y())
+    pdf.ln(3)
+    pdf.set_font(pdf._body, size=7.5)
+    pdf.set_text_color(*_SUBTEXT)
+    ts = datetime.now(timezone.utc).strftime("%B %d, %Y  --  %H:%M UTC")
+    pdf.cell(0, 4, f"Generated: {ts}  |  MirrorLens via Splunk MCP", align="C")
+
+    return bytes(pdf.output())
+
+
 def generate_pdf(data: dict[str, list[dict[str, Any]]]) -> bytes:
     analysis       = data.get("analysis", [])
     recommendation = data.get("recommendation", [])

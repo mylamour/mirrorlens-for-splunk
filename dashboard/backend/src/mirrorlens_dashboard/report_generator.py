@@ -145,8 +145,9 @@ def generate_pdf(data: dict[str, list[dict[str, Any]]]) -> bytes:
     pdf = _PDF()
 
     # ══════════════════════════════════════════════════════════════════
-    # Page 1 — Cover
+    # Page 1 — Cover  (auto page-break OFF so nothing spills to page 2)
     # ══════════════════════════════════════════════════════════════════
+    pdf.set_auto_page_break(False)
     pdf.add_page()
 
     # Thin top accent line
@@ -242,8 +243,9 @@ def generate_pdf(data: dict[str, list[dict[str, Any]]]) -> bytes:
     pdf.cell(0, 5, "CONFIDENTIAL -- For authorized personnel only", align="C")
 
     # ══════════════════════════════════════════════════════════════════
-    # Content pages
+    # Content pages  (re-enable auto page-break)
     # ══════════════════════════════════════════════════════════════════
+    pdf.set_auto_page_break(True, margin=20)
 
     if timeline:
         pdf.add_page()

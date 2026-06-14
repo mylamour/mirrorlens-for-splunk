@@ -203,7 +203,7 @@ class ReportPDF(FPDF):
         return max(1, total)
 
     def code_box(self, code: str, label: str = "SPL") -> None:
-        """Render a labelled monospace code block."""
+        """Render a labelled monospace code block with exact height."""
         if not code:
             return
         self.ln(1)
@@ -213,28 +213,32 @@ class ReportPDF(FPDF):
 
         text_w = self.epw - 4   # 3 mm accent bar + 1 mm gap
         line_h = 4.5
-        padding = 4             # 2 mm top + 2 mm bottom
 
-        lines  = self._wrapped_line_count(code, text_w)
-        box_h  = lines * line_h + padding
-        if self.get_y() + box_h > self.h - 22:
+        # Page-break guard (estimated)
+        est_lines = self._wrapped_line_count(code, text_w)
+        if self.get_y() + est_lines * line_h + 4 > self.h - 22:
             self.add_page()
 
-        x0, y0 = self.get_x(), self.get_y()
-        # Background + border
-        self.set_fill_color(*_CODE_BG)
-        self.set_draw_color(*_CODE_BORDER)
-        self.set_line_width(0.2)
-        self.rect(x0, y0, self.epw, box_h, "FD")
-        # Left accent bar
-        self.set_fill_color(*_ACCENT)
-        self.rect(x0, y0, 1.5, box_h, "F")
-        # Text — body font supports Unicode
+        x0, y0 = self.l_margin, self.get_y()
+
+        # ── Step 1: draw text with per-line fill so height is always exact ──
         self.set_xy(x0 + 3, y0 + 2)
         self.set_font(self._body, size=7.5)
         self.set_text_color(*_TEXT)
-        self.multi_cell(text_w, line_h, code)
-        self.set_y(y0 + box_h + 2)
+        self.set_fill_color(*_CODE_BG)
+        # multi_cell fill=True fills background cell-by-cell — no over-estimation
+        self.multi_cell(text_w, line_h, code, fill=True)
+        y1 = self.get_y() + 2      # 2 mm bottom padding
+        actual_h = y1 - y0
+
+        # ── Step 2: border + left accent bar drawn on top (after knowing y1) ─
+        self.set_draw_color(*_CODE_BORDER)
+        self.set_line_width(0.2)
+        self.rect(x0, y0, self.epw, actual_h, "D")   # stroke only
+        self.set_fill_color(*_ACCENT)
+        self.rect(x0, y0, 1.5, actual_h, "F")        # accent bar covers left gap
+
+        self.set_y(y1 + 2)
 
     def divider(self, thin: bool = False) -> None:
         self.ln(2)

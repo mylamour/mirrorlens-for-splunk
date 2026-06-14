@@ -596,27 +596,23 @@ def _truncate_words(text: str, max_chars: int) -> str:
 
 
 class _FindingCardPDF(ReportPDF):
-    """ReportPDF subclass with a consistent header on every page."""
+    """ReportPDF subclass: shows 'p. N' on the right of every page's header."""
 
     def header(self) -> None:
-        # Top accent bar
+        # Accent bar on every page
         self.set_fill_color(*_ACCENT)
-        self.rect(0, 0, self.w, 3, "F")
-        # MIRRORLENS left, "Security Finding Card" right, page number far right
-        self.set_y(8)
-        self._hbold(9)
-        self.set_text_color(*_ACCENT)
-        self.cell(0, 5, "MIRRORLENS", align="L", new_x="LMARGIN", new_y="NEXT")
-        self.set_font(self._body, size=8)
+        self.rect(0, 0, self.w, 2.5, "F")
+        # Page number right-aligned
+        self.set_font(self._body, size=7.5)
         self.set_text_color(*_SUBTEXT)
-        self.set_y(8)
-        page_label = f"Security Finding Card  |  p. {self.page_no()}"
-        self.cell(0, 5, page_label, align="R")
-        self.set_y(16)
+        self.set_y(5)
+        self.cell(0, 4, f"p. {self.page_no()}", align="R")
+        # Thin rule closing the header zone
         self.set_draw_color(*_RULE)
-        self.set_line_width(0.2)
-        self.line(18, self.get_y(), self.w - 18, self.get_y())
-        self.ln(4)
+        self.set_line_width(0.15)
+        self.set_y(11)
+        self.line(18, 11, self.w - 18, 11)
+        self.set_y(self.t_margin)
 
 
 def generate_finding_pdf(finding: dict[str, Any], related: dict[str, Any] | None = None) -> bytes:
@@ -625,6 +621,20 @@ def generate_finding_pdf(finding: dict[str, Any], related: dict[str, Any] | None
     pdf.setup()
     pdf.set_auto_page_break(True, margin=18)
     pdf.add_page()
+
+    # ── Page 1 branding block (content area, below the header zone) ───────────
+    pdf._hbold(9)
+    pdf.set_text_color(*_ACCENT)
+    pdf.cell(0, 5, "MIRRORLENS", align="L", new_x="LMARGIN", new_y="NEXT")
+    pdf._hbold(8)
+    pdf.set_text_color(*_SUBTEXT)
+    pdf.set_y(pdf.t_margin)
+    pdf.cell(0, 5, "Security Finding Card", align="R")
+    pdf.ln(7)
+    pdf.set_draw_color(*_RULE)
+    pdf.set_line_width(0.2)
+    pdf.line(18, pdf.get_y(), pdf.w - 18, pdf.get_y())
+    pdf.ln(5)
 
     # ── Finding identity ──────────────────────────────────────────────────────
     confidence = str(finding.get("confidence", "")).upper()

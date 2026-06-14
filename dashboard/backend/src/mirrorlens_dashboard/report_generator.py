@@ -182,23 +182,46 @@ class ReportPDF(FPDF):
         self.set_text_color(*_TEXT)
         self.multi_cell(self.epw, 5, text)
 
+    def _wrapped_line_count(self, text: str, max_w: float, size: float = 7.5) -> int:
+        """Count actual wrapped lines using font metrics (no char-count guessing)."""
+        self.set_font(self._body, size=size)
+        total = 0
+        for paragraph in text.split("\n"):
+            if not paragraph:
+                total += 1
+                continue
+            line_w = 0.0
+            para_lines = 1
+            for word in paragraph.split(" "):
+                w = self.get_string_width(word + " ")
+                if line_w + w > max_w and line_w > 0:
+                    para_lines += 1
+                    line_w = w
+                else:
+                    line_w += w
+            total += para_lines
+        return max(1, total)
+
     def code_box(self, code: str, label: str = "SPL") -> None:
         """Render a labelled monospace code block."""
         if not code:
             return
         self.ln(1)
-        self._hbold( size=7.5)
+        self._hbold(size=7.5)
         self.set_text_color(*_SUBTEXT)
         self.cell(0, 4, label + ":", new_x="LMARGIN", new_y="NEXT")
 
-        # Estimate height; check page break
-        lines = max(1, code.count("\n") + 1 + len(code) // 90)
-        box_h = lines * 4.5 + 4
+        text_w = self.epw - 4   # 3 mm accent bar + 1 mm gap
+        line_h = 4.5
+        padding = 4             # 2 mm top + 2 mm bottom
+
+        lines  = self._wrapped_line_count(code, text_w)
+        box_h  = lines * line_h + padding
         if self.get_y() + box_h > self.h - 22:
             self.add_page()
 
         x0, y0 = self.get_x(), self.get_y()
-        # Draw background
+        # Background + border
         self.set_fill_color(*_CODE_BG)
         self.set_draw_color(*_CODE_BORDER)
         self.set_line_width(0.2)
@@ -206,13 +229,12 @@ class ReportPDF(FPDF):
         # Left accent bar
         self.set_fill_color(*_ACCENT)
         self.rect(x0, y0, 1.5, box_h, "F")
-        # Code text — use body font so Unicode (CJK, em-dash) renders correctly
+        # Text — body font supports Unicode
         self.set_xy(x0 + 3, y0 + 2)
         self.set_font(self._body, size=7.5)
         self.set_text_color(*_TEXT)
-        self.multi_cell(self.epw - 4, 4.5, code)
-        # Ensure y is past the box
-        self.set_y(max(self.get_y(), y0 + box_h) + 2)
+        self.multi_cell(text_w, line_h, code)
+        self.set_y(y0 + box_h + 2)
 
     def divider(self, thin: bool = False) -> None:
         self.ln(2)

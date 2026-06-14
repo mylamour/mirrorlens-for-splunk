@@ -97,6 +97,12 @@ class ReportPDF(FPDF):
     def setup(self) -> None:
         self._body, self._mono = _setup_fonts(self)
 
+    def _safe(self, text: str) -> str:
+        """Sanitize text for Latin-1 fonts: replace unencodable chars with '?'."""
+        if self._body != "Helvetica":
+            return text
+        return text.encode("latin-1", errors="replace").decode("latin-1")
+
     # fpdf2 lifecycle
     def header(self) -> None:
         if self.page_no() == 1:
@@ -180,7 +186,7 @@ class ReportPDF(FPDF):
         self.set_x(self.l_margin)
         self.set_font(self._body, size=size)
         self.set_text_color(*_TEXT)
-        self.multi_cell(self.epw, 5, text)
+        self.multi_cell(self.epw, 5, self._safe(text))
 
     def _wrapped_line_count(self, text: str, max_w: float, size: float = 7.5) -> int:
         """Count actual wrapped lines using font metrics (no char-count guessing)."""
@@ -220,6 +226,7 @@ class ReportPDF(FPDF):
             self.add_page()
 
         x0, y0 = self.l_margin, self.get_y()
+        page0 = self.page
 
         # ── Step 1: draw text with per-line fill so height is always exact ──
         self.set_xy(x0 + 3, y0 + 2)
@@ -227,16 +234,17 @@ class ReportPDF(FPDF):
         self.set_text_color(*_TEXT)
         self.set_fill_color(*_CODE_BG)
         # multi_cell fill=True fills background cell-by-cell — no over-estimation
-        self.multi_cell(text_w, line_h, code, fill=True)
+        self.multi_cell(text_w, line_h, self._safe(code), fill=True)
         y1 = self.get_y() + 2      # 2 mm bottom padding
-        actual_h = y1 - y0
 
-        # ── Step 2: border + left accent bar drawn on top (after knowing y1) ─
-        self.set_draw_color(*_CODE_BORDER)
-        self.set_line_width(0.2)
-        self.rect(x0, y0, self.epw, actual_h, "D")   # stroke only
-        self.set_fill_color(*_ACCENT)
-        self.rect(x0, y0, 1.5, actual_h, "F")        # accent bar covers left gap
+        # ── Step 2: border + left accent bar — only when still on the same page ─
+        if self.page == page0:
+            actual_h = y1 - y0
+            self.set_draw_color(*_CODE_BORDER)
+            self.set_line_width(0.2)
+            self.rect(x0, y0, self.epw, actual_h, "D")   # stroke only
+            self.set_fill_color(*_ACCENT)
+            self.rect(x0, y0, 1.5, actual_h, "F")        # accent bar covers left gap
 
         self.set_y(y1 + 2)
 
@@ -387,7 +395,7 @@ def generate_finding_pdf(finding: dict[str, Any], related: dict[str, Any] | None
         for act in actions:
             raw   = str(act.get("action", ""))
             parts = raw.split(" \u2014 ", 1)
-            badge = parts[0].strip().split()[0] if parts else "ACTION"
+            badge = parts[0].strip().split()[0] if parts[0].strip() else "ACTION"
             body  = parts[1].strip() if len(parts) > 1 else raw
             pdf.ensure_space(18)
             pdf.heading_line(badge, "")

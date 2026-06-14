@@ -1,0 +1,15 @@
+Security teams already have more telemetry in Splunk than they can reasonably investigate by hand. An analyst still has to search, pivot, correlate events across indexes, and decide which detections are missing. MirrorLens turns that workflow into an autonomous AI investigation through Splunk's MCP Server.
+
+Here is the product running. MirrorLens connects to a Splunk instance through the official MCP Server. For this public demo, I am loading a sample investigation, so no private token or customer data appears in the video.
+
+Once the investigation starts, the AI runs a ReAct loop: reason, act, observe. It discovers Splunk server details, indexes, hosts, sourcetypes, saved searches, and relevant fields through MCP calls. The dashboard keeps the main view focused on analyst outcomes, while the agent trace preserves the MCP proof behind the scenes.
+
+The agent then runs targeted SPL queries and adapts based on what it finds. It is not following a fixed checklist. It uses the evidence already collected to decide which query to run next, where visibility is weak, and which attack behaviors matter.
+
+The first result is a MITRE ATT&CK mapped investigation summary. MirrorLens identifies active exfiltration patterns, credential abuse, SIEM visibility gaps, and risky management-plane access. These findings are presented as security outcomes, not raw query output.
+
+The most important part is validation. MirrorLens does not just generate SPL detection rules. It tests those rules against Splunk data through MCP and reports the match count. When a rule actually fires, the dashboard raises a full-screen detection alert with the rule, SPL, and sample matches.
+
+The investigation closes with a response playbook: containment, eradication, recovery, and risk-ranked next actions. Then MirrorLens enters watch mode, polling Splunk for new indexes and sourcetypes so it can trigger another investigation when the environment changes.
+
+In under three minutes, MirrorLens shows how Splunk MCP Server can support a new category of agentic security operations: autonomous discovery, adaptive SPL investigation, validated detections, live proof, and a response plan, all streamed to a real-time analyst dashboard.

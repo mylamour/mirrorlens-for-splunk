@@ -1,0 +1,87 @@
+1
+00:00:00,050 --> 00:00:06,616
+Security teams already have more telemetry in Splunk than they can reasonably investigate by hand.
+
+2
+00:00:06,616 --> 00:00:14,225
+An analyst still has to search, pivot, correlate events across indexes, and decide which detections are missing.
+
+3
+00:00:14,225 --> 00:00:20,978
+MirrorLens turns that workflow into an autonomous AI investigation through Splunk's MCP Server.
+
+4
+00:00:20,978 --> 00:00:23,097
+Here is the product running.
+
+5
+00:00:23,097 --> 00:00:28,233
+MirrorLens connects to a Splunk instance through the official MCP Server.
+
+6
+00:00:28,233 --> 00:00:36,521
+For this public demo, I am loading a sample investigation, so no private token or customer data appears in the video.
+
+7
+00:00:36,521 --> 00:00:43,002
+Once the investigation starts, the AI runs a ReAct loop: reason, act, observe.
+
+8
+00:00:43,002 --> 00:00:53,152
+It discovers Splunk server details, indexes, hosts, sourcetypes, saved searches, and relevant fields through MCP calls.
+
+9
+00:00:53,152 --> 00:01:01,616
+The dashboard keeps the main view focused on analyst outcomes, while the agent trace preserves the MCP proof behind the scenes.
+
+10
+00:01:01,616 --> 00:01:07,051
+The agent then runs targeted SPL queries and adapts based on what it finds.
+
+11
+00:01:07,051 --> 00:01:09,859
+It is not following a fixed checklist.
+
+12
+00:01:09,859 --> 00:01:18,573
+It uses the evidence already collected to decide which query to run next, where visibility is weak, and which attack behaviors matter.
+
+13
+00:01:18,573 --> 00:01:24,035
+The first result is a MITRE ATT&CK mapped investigation summary.
+
+14
+00:01:24,035 --> 00:01:33,804
+MirrorLens identifies active exfiltration patterns, credential abuse, SIEM visibility gaps, and risky management-plane access.
+
+15
+00:01:33,804 --> 00:01:39,171
+These findings are presented as security outcomes, not raw query output.
+
+16
+00:01:39,171 --> 00:01:42,133
+The most important part is validation.
+
+17
+00:01:42,133 --> 00:01:46,372
+MirrorLens does not just generate SPL detection rules.
+
+18
+00:01:46,372 --> 00:01:51,829
+It tests those rules against Splunk data through MCP and reports the match count.
+
+19
+00:01:51,829 --> 00:01:59,130
+When a rule actually fires, the dashboard raises a full-screen detection alert with the rule, SPL, and sample matches.
+
+20
+00:01:59,130 --> 00:02:08,749
+The investigation closes with a response playbook: containment, eradication, recovery, and risk-ranked next actions.
+
+21
+00:02:08,749 --> 00:02:18,301
+Then MirrorLens enters watch mode, polling Splunk for new indexes and sourcetypes so it can trigger another investigation when the environment changes.
+
+22
+00:02:18,301 --> 00:02:35,991
+In under three minutes, MirrorLens shows how Splunk MCP Server can support a new category of agentic security operations: autonomous discovery, adaptive SPL investigation, validated detections, live proof, and a response plan, all streamed to a real-time analyst dashboard.

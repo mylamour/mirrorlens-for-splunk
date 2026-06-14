@@ -31,7 +31,7 @@ export default function CenterPanel() {
       const res = await fetch(REPORT_FINDING_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ finding }),
+        body: JSON.stringify({ finding, analysis, recommendation: recommendations }),
       });
       if (!res.ok) return;
       const blob = await res.blob();

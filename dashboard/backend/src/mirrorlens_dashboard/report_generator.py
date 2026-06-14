@@ -145,7 +145,7 @@ class ReportPDF(FPDF):
         self.set_font(self._body, size=8)
         parts = [f"{k}: {v}" for k, v in pairs]
         self.set_text_color(*_SUBTEXT)
-        self.multi_cell(self.epw, 5, sep.join(parts))
+        self.multi_cell(self.epw, 5, self._safe(sep.join(parts)))
         self.set_text_color(*_TEXT)
 
     def heading_line(self, badge: str, title: str, right_label: str = "") -> None:
@@ -170,13 +170,13 @@ class ReportPDF(FPDF):
             right_w = self.get_string_width(right_label) + 4
             self.set_font(self._body, size=9)
         avail = max(10.0, self.epw - badge_w - right_w)
-        title_str = self._fit(title, avail)
+        title_str = self._fit(self._safe(title), avail)
         self.cell(avail, 6, title_str)
 
         if right_label:
             self._hbold(8)
             self.set_text_color(*_ACCENT)
-            self.cell(right_w, 6, right_label, align="R")
+            self.cell(right_w, 6, self._safe(right_label), align="R")
 
         self.ln(6)
         self.set_x(self.l_margin)
@@ -378,7 +378,7 @@ def generate_finding_pdf(finding: dict[str, Any], related: dict[str, Any] | None
             pdf.set_x(pdf.l_margin)
             pdf.set_font(pdf._body, size=9)
             pdf.set_text_color(*_ACCENT)
-            pdf.multi_cell(pdf.epw, 5, rule_name + match_note)
+            pdf.multi_cell(pdf.epw, 5, pdf._safe(rule_name + match_note))
             pdf.set_text_color(*_SUBTEXT)
             if rule_desc:
                 pdf.body_text(rule_desc, size=8.5)

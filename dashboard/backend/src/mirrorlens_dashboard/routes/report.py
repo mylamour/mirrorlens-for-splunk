@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -20,12 +21,27 @@ log = logging.getLogger(__name__)
 
 class FindingRequest(BaseModel):
     finding: dict[str, Any]
+    # Optional: frontend passes its current analysis/recommendation snapshot so
+    # exported rules always match the investigation run the user is looking at,
+    # even in Watch Mode where the EventBus may contain events from multiple runs.
+    analysis: list[dict[str, Any]] | None = None
+    recommendation: list[dict[str, Any]] | None = None
 
 
-def _related_context(finding: dict[str, Any]) -> dict[str, Any]:
-    """Pull detection rules and response actions from EventBus that relate to this finding."""
-    analysis      = [e.payload for e in bus.replay("analysis",      limit=200)]
-    recommendation = [e.payload for e in bus.replay("recommendation", limit=200)]
+def _related_context(
+    finding: dict[str, Any],
+    analysis: list[dict[str, Any]] | None = None,
+    recommendation: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Pull detection rules and response actions that relate to this finding.
+
+    Uses caller-supplied snapshots when provided (Watch Mode safety); falls back
+    to a fresh EventBus replay otherwise.
+    """
+    if analysis is None:
+        analysis = [e.payload for e in bus.replay("analysis", limit=200)]
+    if recommendation is None:
+        recommendation = [e.payload for e in bus.replay("recommendation", limit=200)]
 
     tech_id = str(finding.get("technique_id", "")).upper()
     tactic  = str(finding.get("tactic", "")).lower()
@@ -83,8 +99,7 @@ def _related_context(finding: dict[str, Any]) -> dict[str, Any]:
         text = str(rec.get("action", "")).lower()
         return sum(1 for kw in keywords if kw in text)
 
-    sorted_recs = sorted(all_recs, key=_score, reverse=True)
-    matched_recs: list[dict[str, Any]] = sorted_recs[:2]
+    matched_recs: list[dict[str, Any]] = sorted(all_recs, key=_score, reverse=True)[:2]
 
     return {"rules": matched_rules, "actions": matched_recs}
 
@@ -94,7 +109,7 @@ async def download_finding_pdf(req: FindingRequest) -> StreamingResponse:
     if not req.finding:
         return JSONResponse(status_code=400, content={"error": "missing finding data"})
 
-    related = _related_context(req.finding)
+    related = _related_context(req.finding, analysis=req.analysis, recommendation=req.recommendation)
 
     try:
         pdf_bytes = generate_finding_pdf(req.finding, related=related)
@@ -103,7 +118,10 @@ async def download_finding_pdf(req: FindingRequest) -> StreamingResponse:
         return JSONResponse(status_code=500, content={"error": f"PDF generation failed: {exc}"})
 
     tech_id = str(req.finding.get("technique_id", "finding"))
-    safe_id = tech_id.lower().replace(".", "-").replace("/", "-")
+    # Whitelist: keep only lowercase alphanumerics and hyphens to prevent header injection
+    safe_id = re.sub(r"[^a-z0-9-]", "", tech_id.lower().replace(".", "-").replace("/", "-"))
+    if not safe_id:
+        safe_id = "finding"
     ts = datetime.now(timezone.utc).strftime("%Y%m%d")
     filename = f"mirrorlens-finding-{safe_id}-{ts}.pdf"
 

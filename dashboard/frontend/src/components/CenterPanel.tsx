@@ -41,7 +41,9 @@ export default function CenterPanel() {
       const techId = String(finding.technique_id ?? "finding")
         .toLowerCase().replace(/[./]/g, "-");
       a.download = `mirrorlens-finding-${techId}-${new Date().toISOString().slice(0,10)}.pdf`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } finally {
       setExportingFinding(false);
@@ -53,7 +55,6 @@ export default function CenterPanel() {
 
   const currentStep = getCurrentStep(latestPhase);
   const isComplete = statusEvents.some((s) => s.event === "completed");
-  const completedEvent = statusEvents.find((s) => s.event === "completed");
   const errorEvent = statusEvents.find((s) => s.event === "error");
   const isIdle = !investigationRunning && !isComplete && !errorEvent && phases.length === 0;
 

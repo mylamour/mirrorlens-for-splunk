@@ -660,9 +660,7 @@ def generate_finding_pdf(finding: dict[str, Any], related: dict[str, Any] | None
         for rule in rules:
             rule_name  = str(rule.get("name", ""))
             rule_desc  = str(rule.get("description", ""))
-            # Limit SPL to ~2 lines (≈180 chars) to leave room for Response Actions
-            spl_full   = str(rule.get("spl_query", "")).strip()
-            spl        = _truncate_words(spl_full, 180)
+            spl        = str(rule.get("spl_query", "")).strip()
             match_type = str(rule.get("_match", ""))
             match_note = "  (tactic match)" if match_type == "tactic" else ""
 
@@ -674,7 +672,7 @@ def generate_finding_pdf(finding: dict[str, Any], related: dict[str, Any] | None
             pdf.multi_cell(pdf.epw, 5, rule_name + match_note)
             pdf.set_text_color(*_SUBTEXT)
             if rule_desc:
-                pdf.body_text(_truncate_words(rule_desc, 220), size=8.5)
+                pdf.body_text(rule_desc, size=8.5)
             if spl:
                 pdf.code_box(spl)
             pdf.ln(2)
@@ -682,10 +680,7 @@ def generate_finding_pdf(finding: dict[str, Any], related: dict[str, Any] | None
         pdf.body_text("No detection rule found for this technique in the current investigation.", size=8.5)
 
     # ── Response Actions ──────────────────────────────────────────────────────
-    # Force a new page if we're past 60% of the page — guarantees Actions are visible
     actions: list[dict[str, Any]] = (related or {}).get("actions", [])
-    if pdf.get_y() > pdf.h * 0.6:
-        pdf.add_page()
     _finding_section_label(pdf, "RESPONSE ACTIONS")
     if actions:
         for act in actions:
@@ -695,7 +690,7 @@ def generate_finding_pdf(finding: dict[str, Any], related: dict[str, Any] | None
             body  = parts[1].strip() if len(parts) > 1 else raw
             pdf.ensure_space(18)
             pdf.heading_line(badge, "")
-            pdf.body_text(_truncate_words(body, 320), size=8.5)
+            pdf.body_text(body, size=8.5)
             pdf.ln(2)
     else:
         pdf.body_text("No response actions available for this finding.", size=8.5)

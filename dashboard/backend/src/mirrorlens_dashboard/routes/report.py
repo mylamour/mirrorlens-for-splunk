@@ -75,7 +75,27 @@ def _related_context(finding: dict[str, Any]) -> dict[str, Any]:
         if tactic and str(uc.get("mitre_tactic", "")).lower() == tactic
         and str(uc.get("mitre_technique", "")).upper() != tech_id
     ]
-    matched_rules: list[dict[str, Any]] = (exact_rules or tactic_rules)[:3]
+    candidate_rules = exact_rules or tactic_rules
+
+    # Within the candidate set, sort by keyword overlap with the finding context
+    finding_keywords = {
+        w.lower() for w in (
+            str(finding.get("technique_name", "")).split()
+            + str(finding.get("description", "")).split()
+            + str(finding.get("evidence", "")).split()
+        )
+        if len(w) > 4
+    }
+
+    def _rule_score(rule: dict[str, Any]) -> int:
+        corpus = " ".join([
+            str(rule.get("name", "")),
+            str(rule.get("description", "")),
+            str(rule.get("spl_query", "")),
+        ]).lower()
+        return sum(1 for kw in finding_keywords if kw in corpus)
+
+    matched_rules: list[dict[str, Any]] = sorted(candidate_rules, key=_rule_score, reverse=True)[:3]
 
     # Response actions: score by keyword overlap with technique_id, tactic, description
     rec_ev  = next((e for e in reversed(recommendation) if e.get("data")), {})

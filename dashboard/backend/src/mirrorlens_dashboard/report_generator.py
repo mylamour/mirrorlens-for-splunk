@@ -659,6 +659,16 @@ def generate_finding_pdf(finding: dict[str, Any], related: dict[str, Any] | None
     rules: list[dict[str, Any]] = (related or {}).get("rules", [])
     _finding_section_label(pdf, "DETECTION COVERAGE")
     if rules:
+        match_note = rules[0].get("_match", "exact")
+        scope_label = (
+            f"Detection rules mapped to {tech_id}, ordered by relevance to this finding."
+            if match_note == "exact" and tech_id and tech_id != "N/A"
+            else "Detection rules for this tactic, ordered by relevance to this finding."
+        )
+        pdf.set_font(pdf._body, size=7.5)
+        pdf.set_text_color(*_SUBTEXT)
+        pdf.cell(0, 4, scope_label, new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(2)
         for rule in rules:
             rule_name  = str(rule.get("name", ""))
             rule_desc  = str(rule.get("description", ""))

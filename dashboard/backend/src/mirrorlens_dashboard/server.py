@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from mirrorlens_dashboard.routes import (
     config_router,
     investigate_router,
+    report_router,
     snapshot_router,
     stream_router,
 )
@@ -40,6 +41,7 @@ def build_app() -> FastAPI:
     app.include_router(snapshot_router, prefix="/api")
     app.include_router(stream_router, prefix="/api")
     app.include_router(investigate_router, prefix="/api")
+    app.include_router(report_router, prefix="/api")
 
     if FRONTEND_DIST.is_dir():
         assets_dir = FRONTEND_DIST / "assets"

@@ -12,7 +12,6 @@ export default function App() {
   const isIdle = phases.length === 0;
   const hasTrace = aiCalls.length > 0 || mcpCalls.length > 0 || statusEvents.length > 0 || investigationRunning;
   const showTrace = !isIdle && hasTrace;
-
   return (
     <Box
       sx={{

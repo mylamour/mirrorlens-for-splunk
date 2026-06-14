@@ -9,9 +9,10 @@ interface Props {
   title: string;
   accent?: AccentColor;
   children: ReactNode;
+  footer?: ReactNode;
 }
 
-export default function DetailDrawer({ open, onClose, title, accent = "cyan", children }: Props) {
+export default function DetailDrawer({ open, onClose, title, accent = "cyan", children, footer }: Props) {
   const c = ACCENT_HEX[accent];
 
   return (
@@ -72,6 +73,16 @@ export default function DetailDrawer({ open, onClose, title, accent = "cyan", ch
               <Box sx={{ flex: 1, overflow: "auto", p: 2.5, minHeight: 0 }}>
                 {children}
               </Box>
+
+              {footer && (
+                <Box sx={{
+                  px: 2.5, py: 1.5, flexShrink: 0,
+                  borderTop: `1px solid ${c}22`,
+                  background: `rgba(0,0,0,0.15)`,
+                }}>
+                  {footer}
+                </Box>
+              )}
             </Box>
           </motion.div>
         </>

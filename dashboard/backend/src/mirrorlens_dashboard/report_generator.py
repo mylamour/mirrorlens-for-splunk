@@ -596,23 +596,10 @@ def _truncate_words(text: str, max_chars: int) -> str:
 
 
 class _FindingCardPDF(ReportPDF):
-    """ReportPDF subclass: shows 'p. N' on the right of every page's header."""
+    """ReportPDF subclass: no header on any page."""
 
     def header(self) -> None:
-        # Accent bar on every page
-        self.set_fill_color(*_ACCENT)
-        self.rect(0, 0, self.w, 2.5, "F")
-        # Page number right-aligned
-        self.set_font(self._body, size=7.5)
-        self.set_text_color(*_SUBTEXT)
-        self.set_y(5)
-        self.cell(0, 4, f"p. {self.page_no()}", align="R")
-        # Thin rule closing the header zone
-        self.set_draw_color(*_RULE)
-        self.set_line_width(0.15)
-        self.set_y(11)
-        self.line(18, 11, self.w - 18, 11)
-        self.set_y(self.t_margin)
+        pass
 
 
 def generate_finding_pdf(finding: dict[str, Any], related: dict[str, Any] | None = None) -> bytes:
